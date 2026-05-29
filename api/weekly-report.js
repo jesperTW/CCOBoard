@@ -12,20 +12,24 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Vaste ontvangers uit env var, bijv: "jesper@techniekwerkt.nl,michiel@techniekwerkt.nl"
+  const recipients = (process.env.REPORT_RECIPIENTS || '').split(',').map(e => e.trim()).filter(Boolean);
+  if (!recipients.length) return res.status(400).json({ error: 'Geen ontvangers ingesteld (REPORT_RECIPIENTS)' });
+
   try {
-    const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
-    if (usersError) throw usersError;
+    // Haal de eerste rij op met dashboard data (gedeeld teamdashboard)
+    const { data: row, error: dataError } = await supabase
+      .from('dashboard_data')
+      .select('data')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (dataError) throw dataError;
+    if (!row?.data) return res.json({ success: true, message: 'Geen data gevonden' });
 
     const results = [];
-    for (const user of users) {
-      const { data: row } = await supabase
-        .from('dashboard_data')
-        .select('data')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!row?.data) continue;
-
+    {
       const S = row.data;
       const now = new Date();
       const monday = getMonday(now);
@@ -54,14 +58,15 @@ module.exports = async function handler(req, res) {
 
       const html = buildEmailHTML({ S, weekNum, startLabel, endLabel, tG, tA, tO, totOmzet, doel, pct, weekData });
 
-      const { error: sendError } = await resend.emails.send({
-        from: `CCO Board <weekrapport@ccoboard.nl>`,
-        to: user.email,
-        subject: `Weekrapport week ${weekNum} — ${S.bedrijf || 'CCO Board'}`,
-        html
-      });
-
-      results.push({ email: user.email, sent: !sendError, error: sendError?.message });
+      for (const to of recipients) {
+        const { error: sendError } = await resend.emails.send({
+          from: `CCO Board <weekrapport@ccoboard.nl>`,
+          to,
+          subject: `Weekrapport week ${weekNum} — ${S.bedrijf || 'CCO Board'}`,
+          html
+        });
+        results.push({ email: to, sent: !sendError, error: sendError?.message });
+      }
     }
 
     return res.json({ success: true, results });
