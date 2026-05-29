@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Inloggen — CCO Board</title>
+<title>ccoboard.nl</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
@@ -41,15 +41,13 @@ h2{font-size:22px;font-weight:800;color:var(--navy);margin-bottom:6px}
 <body>
 <div class="card">
   <div class="logo">
-    <div class="logo-icon">C</div>
     <div class="logo-text">
-      <h1>CCO Board</h1>
-      <p>Techniekwerkt dashboard</p>
+      <h1>ccoboard.nl</h1>
     </div>
   </div>
 
   <h2 id="formTitle">Welkom terug</h2>
-  <p class="subtitle" id="formSub">Log in om je dashboard te openen</p>
+  <p class="subtitle" id="formSub">Voer je gegevens in om verder te gaan</p>
 
   <div class="error" id="errorMsg"></div>
   <div class="success" id="successMsg"></div>
@@ -79,8 +77,8 @@ h2{font-size:22px;font-weight:800;color:var(--navy);margin-bottom:6px}
 
 <script>
 // CONFIGURE: Zelfde credentials als in index.html
-const SUPABASE_URL = 'JOUW_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'JOUW_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://pbjzojhidgulctxniuix.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBianpvamhpZGd1bGN0eG5pdWl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwMjU1MTgsImV4cCI6MjA5NTYwMTUxOH0.odZB-i7iT5k8nOq_W7-HVDIHryiCRrjuLkOQvRZI83M';
 const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Als er al een sessie is, direct doorsturen
