@@ -338,6 +338,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
         <div id="catSettings" style="margin-bottom:12px"></div>
         <div style="display:flex;gap:8px"><button class="btn btn-outline btn-sm" onclick="addCat()">+ Toevoegen</button><button class="btn btn-primary btn-sm" onclick="saveCats()">✓ Opslaan</button></div>
       </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title"><div class="dot" style="background:var(--blue)"></div>Omzet per persoon — openingsstand <span id="startTeamYear" style="font-weight:400;color:var(--muted)"></span></div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Vul hier de omzet in die elk teamlid al had vóór je het dashboard ging gebruiken. Telt mee in leaderboard en jaarcijfers.</p>
+        <div id="startTeamFields" style="margin-bottom:12px"></div>
+        <button class="btn btn-primary btn-sm" onclick="saveStartTeam()">✓ Opslaan</button>
+      </div>
     </div>
   </div>
 </div>
@@ -350,7 +356,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
 const MAANDEN=['Jan','Feb','Mrt','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'];
 const MAANDEN_LANG=['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
 
-const DEF={bedrijf:'Techniekwerkt',subtitel:'CCO Dashboard',doel:1000000,categories:['Eenmalige plaatsing','Abonnement bestaand','Abonnement nieuw','Jobboost','CPC','Resellers','CV Database','Overig'],members:['Jesper','Luuk','Nicky'],startCats:{},days:[],prevYearYear:2025,prevYearCumulative:[81753,114074,178017,243474,326325,371000,371000,470000,510000,532000,572000,714000]};
+const DEF={bedrijf:'Techniekwerkt',subtitel:'CCO Dashboard',doel:1000000,categories:['Eenmalige plaatsing','Abonnement bestaand','Abonnement nieuw','Jobboost','CPC','Resellers','CV Database','Overig'],members:['Jesper','Luuk','Nicky'],startCats:{},startTeam:{},days:[],prevYearYear:2025,prevYearCumulative:[81753,114074,178017,243474,326325,371000,371000,470000,510000,532000,572000,714000]};
 
 // CONFIGURE: Vervang dit met jouw Supabase credentials (zie Instellingen > API in Supabase)
 const SUPABASE_URL = 'https://pbjzojhidgulctxniuix.supabase.co';
@@ -444,7 +450,7 @@ function renderLeaderboard(){
   const wrap=document.getElementById('leaderboard');if(!wrap)return;
   const y=curYear(),dd=daysIn(y);
   const yl=document.getElementById('lbYear');if(yl)yl.textContent='('+y+')';
-  const data=S.members.map(m=>{const mk=memberKey(m);return{m,o:dd.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0)};}).sort((a,b)=>b.o-a.o);
+  const data=S.members.map(m=>{const mk=memberKey(m);return{m,o:(S.startTeam?.[mk]||0)+dd.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0)};}).sort((a,b)=>b.o-a.o);
   const tot=data.reduce((s,x)=>s+x.o,0),max=Math.max(...data.map(x=>x.o),1);
   if(tot===0){wrap.innerHTML='<div class="empty">Nog geen omzet per teamlid geregistreerd.</div>';return;}
   const medals=['🥇','🥈','🥉'];
@@ -535,6 +541,7 @@ window.addEventListener('load', async () => {
   }
   if (!Array.isArray(S.days)) S.days = [];
   if (!S.startCats) S.startCats = {};
+  if (!S.startTeam) S.startTeam = {};
   // Migratie: vul ontbrekende velden aan vanuit DEF
   if (!S.prevYearCumulative || !S.prevYearCumulative.some(v=>v>0)) {
     S.prevYearCumulative = DEF.prevYearCumulative;
@@ -626,7 +633,7 @@ function switchTab(name){
   if(name==='week')generateWeek();
   if(name==='jaar')renderJaar();
   if(name==='historie')renderHistory();
-  if(name==='instellingen'){renderSettings();renderPrevYearFields();renderMFAStatus();}
+  if(name==='instellingen'){renderSettings();renderStartTeam();renderPrevYearFields();renderMFAStatus();}
 }
 
 // ── DAG CAT FIELDS ────────────────────────────────────────────────────────────
@@ -792,7 +799,7 @@ function renderJaar(){
     const mk=memberKey(m);
     const totG=yd.reduce((s,d)=>s+(d.team?.[mk]?.gebeld||0),0);
     const totA=yd.reduce((s,d)=>s+(d.team?.[mk]?.afspraken||0),0);
-    const totO=yd.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0);
+    const totO=(S.startTeam?.[mk]||0)+yd.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0);
     const dagMet=yd.filter(d=>d.team?.[mk]);
     const aanw=dagMet.filter(d=>!d.team[mk].status||d.team[mk].status==='aanwezig').length;
     const ziek=dagMet.filter(d=>d.team[mk].status==='ziek').length;
@@ -1034,6 +1041,21 @@ function saveCats(){const n=S.categories.map((_,i)=>document.getElementById('cat
 function addCat(){S.categories.push('Nieuwe categorie');renderSettings();}
 function removeCat(i){if(S.categories.length<=1){toast('Minimaal 1 categorie');return;}S.categories.splice(i,1);renderSettings();}
 
+function renderStartTeam(){
+  const lbl=document.getElementById('startTeamYear');
+  if(lbl)lbl.textContent='('+curYear()+')';
+  const wrap=document.getElementById('startTeamFields');if(!wrap)return;
+  wrap.innerHTML=S.members.map(m=>{
+    const mk=memberKey(m),val=S.startTeam?.[mk]||'';
+    return`<div class="form-group"><label>${m}</label><input type="number" id="stm-${mk}" value="${val}" placeholder="0" step="1" min="0"/></div>`;
+  }).join('');
+}
+function saveStartTeam(){
+  if(!S.startTeam)S.startTeam={};
+  S.members.forEach(m=>{const mk=memberKey(m);S.startTeam[mk]=parseInt(document.getElementById('stm-'+mk)?.value)||0;});
+  persist();renderLeaderboard();renderJaar();renderKPIs();
+  toast('✓ Openingsstand opgeslagen');
+}
 function renderPrevYearFields(){
   const lbl=document.getElementById('prevYearLbl');
   if(lbl)lbl.textContent='('+(S.prevYearYear||curYear()-1)+')';
