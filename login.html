@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Inloggen — CCO Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#0d1b5e;--blue:#3b6af5;--cyan:#4db8f0;--green:#10b981;--red:#ef4444;--gray-bg:#f4f6fb;--text:#1a1a2e;--muted:#6b7280;--border:#e5e7ef;--white:#ffffff}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--navy);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:var(--white);border-radius:16px;padding:40px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(13,27,94,.35)}
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:32px}
+.logo-icon{width:44px;height:44px;background:var(--blue);border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:20px}
+.logo-text h1{font-size:18px;font-weight:800;color:var(--navy);line-height:1.2}
+.logo-text p{font-size:12px;color:var(--muted)}
+h2{font-size:22px;font-weight:800;color:var(--navy);margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:28px}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:16px}
+.form-group label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.form-group input{border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-size:14px;font-family:inherit;color:var(--text);outline:none;transition:.15s}
+.form-group input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,106,245,.1)}
+.btn-primary{width:100%;background:var(--navy);color:#fff;border:none;padding:13px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;margin-top:8px}
+.btn-primary:hover{background:var(--blue)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed}
+.forgot{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
+.forgot a{color:var(--blue);text-decoration:none;font-weight:600}
+.forgot a:hover{text-decoration:underline}
+.error{background:#fee2e2;border:1px solid #fecaca;color:#991b1b;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none}
+.error.show{display:block}
+.success{background:#dcfce7;border:1px solid #86efac;color:#166534;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none}
+.success.show{display:block}
+.divider{text-align:center;color:var(--muted);font-size:12px;margin:20px 0;position:relative}
+.divider::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border)}
+.divider span{background:var(--white);padding:0 12px;position:relative}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">C</div>
+    <div class="logo-text">
+      <h1>CCO Board</h1>
+      <p>Techniekwerkt dashboard</p>
+    </div>
+  </div>
+
+  <h2 id="formTitle">Welkom terug</h2>
+  <p class="subtitle" id="formSub">Log in om je dashboard te openen</p>
+
+  <div class="error" id="errorMsg"></div>
+  <div class="success" id="successMsg"></div>
+
+  <div id="loginForm">
+    <div class="form-group">
+      <label>E-mailadres</label>
+      <input type="email" id="email" placeholder="jij@bedrijf.nl" autocomplete="email"/>
+    </div>
+    <div class="form-group" id="passwordGroup">
+      <label>Wachtwoord</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')handleSubmit()"/>
+    </div>
+    <button class="btn-primary" id="submitBtn" onclick="handleSubmit()">Inloggen</button>
+    <div class="forgot"><a href="#" onclick="showForgot(event)">Wachtwoord vergeten?</a></div>
+  </div>
+
+  <div id="forgotForm" style="display:none">
+    <div class="form-group">
+      <label>E-mailadres</label>
+      <input type="email" id="resetEmail" placeholder="jij@bedrijf.nl"/>
+    </div>
+    <button class="btn-primary" id="resetBtn" onclick="handleReset()">Reset-link versturen</button>
+    <div class="forgot"><a href="#" onclick="showLogin(event)">Terug naar inloggen</a></div>
+  </div>
+</div>
+
+<script>
+// CONFIGURE: Zelfde credentials als in index.html
+const SUPABASE_URL = 'JOUW_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'JOUW_SUPABASE_ANON_KEY';
+const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Als er al een sessie is, direct doorsturen
+window.addEventListener('load', async () => {
+  const { data: { session } } = await _sb.auth.getSession();
+  if (session) window.location.href = '/';
+
+  // Verwerk wachtwoord-reset token in URL
+  const hash = window.location.hash;
+  if (hash.includes('type=recovery')) {
+    document.getElementById('formTitle').textContent = 'Nieuw wachtwoord instellen';
+    document.getElementById('formSub').textContent = 'Kies een nieuw wachtwoord voor je account';
+    document.getElementById('passwordGroup').querySelector('label').textContent = 'Nieuw wachtwoord';
+    document.getElementById('submitBtn').textContent = 'Wachtwoord opslaan';
+    document.getElementById('submitBtn').onclick = handlePasswordUpdate;
+  }
+});
+
+async function handleSubmit() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  if (!email || !password) { showError('Vul e-mail en wachtwoord in'); return; }
+  setLoading(true);
+  const { error } = await _sb.auth.signInWithPassword({ email, password });
+  setLoading(false);
+  if (error) { showError(error.message === 'Invalid login credentials' ? 'Onjuist e-mailadres of wachtwoord' : error.message); return; }
+  window.location.href = '/';
+}
+
+async function handleReset() {
+  const email = document.getElementById('resetEmail').value.trim();
+  if (!email) { showError('Vul je e-mailadres in'); return; }
+  document.getElementById('resetBtn').disabled = true;
+  const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/login.html' });
+  document.getElementById('resetBtn').disabled = false;
+  if (error) { showError(error.message); return; }
+  showSuccess('Reset-link verstuurd! Controleer je e-mail.');
+}
+
+async function handlePasswordUpdate() {
+  const password = document.getElementById('password').value;
+  if (password.length < 6) { showError('Wachtwoord moet minimaal 6 tekens zijn'); return; }
+  setLoading(true);
+  const { error } = await _sb.auth.updateUser({ password });
+  setLoading(false);
+  if (error) { showError(error.message); return; }
+  showSuccess('Wachtwoord opgeslagen! Je wordt doorgestuurd...');
+  setTimeout(() => window.location.href = '/', 1500);
+}
+
+function showForgot(e) { e.preventDefault(); document.getElementById('loginForm').style.display='none'; document.getElementById('forgotForm').style.display='block'; clearMessages(); }
+function showLogin(e) { e.preventDefault(); document.getElementById('forgotForm').style.display='none'; document.getElementById('loginForm').style.display='block'; clearMessages(); }
+function showError(msg) { const el=document.getElementById('errorMsg'); el.textContent=msg; el.classList.add('show'); document.getElementById('successMsg').classList.remove('show'); }
+function showSuccess(msg) { const el=document.getElementById('successMsg'); el.textContent=msg; el.classList.add('show'); document.getElementById('errorMsg').classList.remove('show'); }
+function clearMessages() { document.getElementById('errorMsg').classList.remove('show'); document.getElementById('successMsg').classList.remove('show'); }
+function setLoading(v) { const btn=document.getElementById('submitBtn'); btn.disabled=v; btn.textContent=v?'Bezig...':'Inloggen'; }
+</script>
+</body>
+</html>

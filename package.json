@@ -1,0 +1,9 @@
+{
+  "name": "ccoboard",
+  "version": "1.0.0",
+  "description": "CCO Dashboard — Techniekwerkt",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "resend": "^3.5.0"
+  }
+}

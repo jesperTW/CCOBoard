@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Techniekwerkt — CCO Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0d1b5e;--blue:#3b6af5;--cyan:#4db8f0;
+  --green:#10b981;--red:#ef4444;--orange:#f59e0b;
+  --gray-bg:#f4f6fb;--text:#1a1a2e;--muted:#6b7280;
+  --border:#e5e7ef;--white:#ffffff;--r:10px;
+  --shadow:0 2px 12px rgba(13,27,94,.08);
+}
+body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var(--gray-bg);min-height:100vh}
+.layout{display:flex;align-items:flex-start;min-height:100vh}
+.sidebar{width:236px;flex:none;align-self:stretch;background:var(--navy);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:14px 14px 18px;box-shadow:2px 0 24px rgba(13,27,94,.25);z-index:200;transition:width .2s ease}
+.nav-collapse{align-self:flex-end;width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.08);border:none;border-radius:7px;color:rgba(255,255,255,.7);cursor:pointer;transition:.15s;margin-bottom:6px}
+.nav-collapse:hover{background:rgba(255,255,255,.18);color:#fff}
+.nav-collapse svg{width:16px;height:16px;transition:transform .2s ease}
+.sidebar-brand{display:flex;align-items:center;gap:10px;padding:4px 8px 16px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,.09);overflow:hidden}
+.brand-text{min-width:0;white-space:nowrap}
+.sidebar.collapsed{width:68px;padding:14px 10px 18px}
+.sidebar.collapsed .nav-collapse{align-self:center}
+.sidebar.collapsed .nav-collapse svg{transform:rotate(180deg)}
+.sidebar.collapsed .brand-text{display:none}
+.sidebar.collapsed .sidebar-brand{justify-content:center;gap:0;padding:4px 0 16px}
+.sidebar.collapsed .nav-tab{justify-content:center;padding:11px 0}
+.sidebar.collapsed .tab-lbl{display:none}
+.sidebar.collapsed .today-pill{display:none}
+.logo-icon{width:34px;height:34px;background:var(--blue);border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:15px;flex-shrink:0}
+.header-title{color:#fff;font-size:15px;font-weight:700;display:block;line-height:1.2}
+.header-sub{color:rgba(255,255,255,.45);font-size:12px;display:block}
+.today-pill{margin-top:auto;background:rgba(77,184,240,.13);border:1px solid rgba(77,184,240,.22);color:var(--cyan);padding:9px 12px;border-radius:9px;font-size:12px;font-weight:600;text-align:center}
+.nav{display:flex;flex-direction:column;gap:3px}
+.nav-tab{display:flex;align-items:center;gap:11px;width:100%;padding:10px 12px;font-size:13.5px;font-weight:600;color:rgba(255,255,255,.62);cursor:pointer;border:none;background:none;border-radius:8px;transition:.15s;font-family:inherit;text-align:left}
+.nav-tab:hover{color:#fff;background:rgba(255,255,255,.08)}
+.nav-tab.active{color:#fff;background:var(--blue)}
+.tab-ico{width:17px;height:17px;flex:none;color:currentColor}
+.tab-ico svg{display:block;width:100%;height:100%}
+.content{flex:1;min-width:0}
+.main{max-width:1340px;margin:0 auto;padding:24px 24px 60px}
+@media(max-width:760px){.layout{flex-direction:column}.sidebar{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;align-items:center;padding:12px 16px;gap:8px}.sidebar-brand{border:none;margin:0;padding:0;flex:1}.nav{flex-direction:row;flex-wrap:wrap;width:100%;order:3}.nav-tab{width:auto}.today-pill{margin:0}}
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:22px;box-shadow:var(--shadow);margin-bottom:16px}
+.card-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--blue);flex-shrink:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.meter-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:22px 26px;box-shadow:var(--shadow);margin-bottom:16px}
+.meter-top{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px}
+.meter-main{font-size:34px;font-weight:800;color:var(--navy);line-height:1}
+.meter-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.meter-pct{font-size:26px;font-weight:800;color:var(--blue);text-align:right}
+.meter-pct-sub{font-size:12px;color:var(--muted);text-align:right;margin-top:2px}
+.bar{height:10px;background:var(--gray-bg);border-radius:20px;overflow:hidden;border:1px solid var(--border)}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:20px;transition:width .5s ease}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group textarea{border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;color:var(--text);background:var(--white);outline:none;transition:.15s}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,106,245,.1)}
+.form-group textarea{resize:vertical;min-height:66px}
+.frow{display:grid;gap:10px}
+.sec-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:12px 0 8px;padding-top:10px;border-top:1px solid var(--border)}
+.auto-total{border:1.5px dashed var(--border);border-radius:8px;padding:9px 12px;font-size:16px;font-weight:800;color:var(--navy);background:var(--gray-bg)}
+.auto-readout{font-size:11px;color:var(--muted);margin-top:4px;font-weight:600}
+.auto-readout strong{color:var(--navy)}
+.btn{border:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:7px;transition:.15s}
+.btn-primary{background:var(--navy);color:#fff}.btn-primary:hover{background:var(--blue)}
+.btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{opacity:.88}
+.btn-outline{background:var(--white);color:var(--navy);border:1.5px solid var(--border)}.btn-outline:hover{background:var(--gray-bg)}
+.btn-green{background:#dcfce7;color:#166534;border:1.5px solid #bbf7d0}.btn-green:hover{background:#bbf7d0}
+.btn-danger{background:#fee2e2;color:var(--red);border:1.5px solid #fecaca}.btn-danger:hover{background:#fecaca}
+.btn-sm{padding:6px 14px;font-size:12px}
+/* TEAM */
+.team-member{background:var(--gray-bg);border:1px solid var(--border);border-radius:8px;padding:13px;margin-bottom:10px}
+.team-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.team-name-lbl{font-size:13px;font-weight:700;color:var(--navy)}
+.badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
+.badge-green{background:#dcfce7;color:#166534}
+.badge-red{background:#fee2e2;color:#991b1b}
+.badge-gray{background:#f3f4f6;color:#6b7280}
+.status-btns{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.status-btn{border:1.5px solid var(--border);background:var(--white);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;color:var(--muted)}
+.status-btn.active-aanwezig{background:#dcfce7;border-color:#86efac;color:#166534}
+.status-btn.active-ziek{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
+.status-btn.active-afwezig{background:#f3f4f6;border-color:#d1d5db;color:#374151}
+.team-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+.team-stat{display:flex;flex-direction:column;gap:4px}
+.team-stat label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.team-stat input{border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit;text-align:right;outline:none;background:var(--white)}
+.team-stat input:focus{border-color:var(--blue)}
+/* CAT ROW */
+.cat-row{display:flex;align-items:center;justify-content:space-between;background:var(--gray-bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;gap:12px;margin-bottom:6px}
+.cat-row-name{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;flex:1}
+.cat-row input{width:130px;border:1.5px solid var(--border);border-radius:6px;padding:7px 10px;font-size:14px;font-weight:700;color:var(--navy);font-family:inherit;text-align:right;outline:none;transition:.15s;flex-shrink:0}
+.cat-row input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,106,245,.1)}
+/* TABLES */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{background:var(--navy);color:#fff;padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.data-table th:first-child{border-radius:8px 0 0 0}.data-table th:last-child{border-radius:0 8px 0 0}
+.data-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.data-table tr:nth-child(even) td{background:var(--gray-bg)}
+.data-table tr:last-child td{border-bottom:none}
+.totaal-row td{font-weight:700;color:var(--navy);background:rgba(59,106,245,.05)!important;border-top:2px solid var(--blue)}
+.pres-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.dot-green{background:var(--green)}.dot-red{background:var(--red)}.dot-gray{background:#9ca3af}
+/* STAT PILL */
+.stat-pill{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
+.pill-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.pill-icon.blue{background:rgba(59,106,245,.1)}.pill-icon.cyan{background:rgba(77,184,240,.1)}.pill-icon.green{background:rgba(16,185,129,.1)}.pill-icon.orange{background:rgba(245,158,11,.1)}
+.pill-val{font-size:20px;font-weight:800;color:var(--navy);line-height:1}
+.pill-lbl{font-size:11px;color:var(--muted);margin-top:2px}
+/* PERSOON CARD */
+.persoon-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
+.persoon-header{background:var(--navy);padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+.persoon-naam{color:#fff;font-size:16px;font-weight:700}
+.persoon-totalen{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--border)}
+.persoon-stat{padding:14px 16px;text-align:center;border-right:1px solid var(--border)}
+.persoon-stat:last-child{border-right:none}
+.persoon-stat-val{font-size:22px;font-weight:800;color:var(--navy)}
+.persoon-stat-lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.persoon-aanw{display:flex;gap:16px;padding:12px 16px;background:var(--gray-bg);border-bottom:1px solid var(--border)}
+.aanw-item{display:flex;align-items:center;gap:6px;font-size:13px}
+.maand-table-wrap{padding:16px;overflow-x:auto}
+/* MAIL */
+.mail-box{background:var(--gray-bg);border:1.5px solid var(--border);border-radius:8px;padding:16px;font-size:13px;line-height:1.75;color:var(--text);white-space:pre-wrap;font-family:'DM Sans',sans-serif;min-height:240px}
+/* HISTORY */
+.hist-list{display:flex;flex-direction:column;gap:8px;max-height:560px;overflow-y:auto}
+.hist-item{background:var(--gray-bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;transition:.15s;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.hist-item:hover{border-color:var(--blue)}
+.hist-body{cursor:pointer;flex:1}
+.hist-date{font-size:12px;font-weight:700;color:var(--blue);margin-bottom:4px}
+.hist-row{display:flex;gap:14px;flex-wrap:wrap}
+.hist-stat{font-size:12px;color:var(--text)}.hist-stat strong{color:var(--navy)}
+.hist-actions{display:flex;gap:6px;flex-shrink:0}
+.hist-detail{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.hist-detail .team-member{background:var(--white)}
+/* SETTINGS */
+.set-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.set-row input{flex:1;border:1.5px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;font-family:inherit;outline:none}
+.set-row input:focus{border-color:var(--blue)}
+.chart-wrap{position:relative;height:300px}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:11px 18px;border-radius:8px;font-size:13px;font-weight:600;transform:translateY(70px);opacity:0;transition:.25s;z-index:999;display:flex;align-items:center;gap:7px}
+.toast.show{transform:translateY(0);opacity:1}
+.empty{color:var(--muted);font-size:14px;padding:20px 0;text-align:center}
+.sidebar-user{margin-top:8px;padding:10px 8px 0;border-top:1px solid rgba(255,255,255,.09)}
+.sb-email{font-size:10px;color:rgba(255,255,255,.4);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}
+.btn-logout{width:100%;background:none;border:1.5px solid rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.55);font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer;font-family:inherit;transition:.15s}
+.btn-logout:hover{background:rgba(255,255,255,.08);color:#fff}
+.sidebar.collapsed .sidebar-user{display:none}
+@media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}.team-stats{grid-template-columns:1fr 1fr}.persoon-totalen{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+  <button class="nav-collapse" onclick="toggleSidebar()" title="In-/uitklappen" aria-label="Menu in-/uitklappen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+  <div class="sidebar-brand">
+    <div class="logo-icon" id="logoIcon">T</div>
+    <div class="brand-text"><span class="header-title" id="headerTitle">CCO Dashboard</span><span class="header-sub" id="headerSub">— Techniekwerkt</span></div>
+  </div>
+  <nav class="nav">
+  <button class="nav-tab active" onclick="switchTab('dag')" title="Dagregistratie"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2.5h6V4"/><path d="M8.5 10h7M8.5 14h7M8.5 18h4"/></svg></span><span class="tab-lbl">Dagregistratie</span></button>
+  <button class="nav-tab" onclick="switchTab('omzet')" title="Omzet"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9.2A4 4 0 0 0 8.5 12 4 4 0 0 0 15 14.8M7.5 11h5M7.5 13h5"/></svg></span><span class="tab-lbl">Omzet</span></button>
+  <button class="nav-tab" onclick="switchTab('week')" title="Weekrapport"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4M4 20h16"/><rect x="7.5" y="12" width="3" height="5"/><rect x="13.5" y="8" width="3" height="9"/></svg></span><span class="tab-lbl">Weekrapport</span></button>
+  <button class="nav-tab" onclick="switchTab('jaar')" title="Jaarcijfers"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M9.5 14.5 9 19h6l-.5-4.5M7 21h10"/></svg></span><span class="tab-lbl">Jaarcijfers</span></button>
+  <button class="nav-tab" onclick="switchTab('historie')" title="Historie"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg></span><span class="tab-lbl">Historie</span></button>
+  <button class="nav-tab" onclick="switchTab('instellingen')" title="Instellingen"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg></span><span class="tab-lbl">Instellingen</span></button>
+  </nav>
+  <div class="today-pill" id="todayPill"></div>
+  <div class="sidebar-user" id="sbUserBlock">
+    <div id="sbUserEmail" class="sb-email"></div>
+    <button onclick="logout()" class="btn-logout">Uitloggen</button>
+  </div>
+</aside>
+<div class="content">
+<div class="main">
+
+<!-- ══ DAG ══ -->
+<div class="panel active" id="panel-dag">
+  <div class="meter-card">
+    <div class="meter-top">
+      <div><div class="meter-main" id="meterMain">€0</div><div class="meter-sub" id="meterSub">van €1.000.000 jaardoel</div></div>
+      <div><div class="meter-pct" id="meterPct">0%</div><div class="meter-pct-sub" id="meterRemain">Nog €1.000.000 te gaan</div></div>
+    </div>
+    <div class="bar"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="dot" style="background:var(--cyan)"></div>Cumulatieve omzet vs jaardoel</div>
+    <div class="chart-wrap"><canvas id="omzetChart"></canvas></div>
+  </div>
+  <!-- TEAM LINKS, DAG RECHTS -->
+  <div class="g2">
+    <div class="card">
+      <div class="card-title"><div class="dot" style="background:var(--cyan)"></div>Team vandaag</div>
+      <div id="teamGrid"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="dot"></div>Dagregistratie</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="form-group"><label>Datum</label><input type="date" id="dagDatum"/></div>
+        <div class="frow" style="grid-template-columns:1fr 1fr">
+          <div class="form-group"><label>Totaal gebeld (auto uit team)</label><div class="auto-total" id="dagGebeld">0</div></div>
+          <div class="form-group"><label>Afspraken gemaakt (auto uit team)</label><div class="auto-total" id="dagAfspraken">0</div></div>
+        </div>
+        <div class="sec-lbl">Omzet vandaag per categorie (€)</div>
+        <div id="dagCatFields"></div>
+        <div class="auto-readout" id="omzetReadout">Categorie-omzet: <strong>€0</strong> &nbsp;·&nbsp; Team-omzet: <strong>€0</strong></div>
+        <div class="form-group"><label>Notities / besproken</label><textarea id="dagNotities" placeholder="Wat is er besproken..."></textarea></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="saveDay()">✓ Opslaan</button>
+          <button class="btn btn-outline" id="dagBelangrijkBtn" onclick="toggleDagBelangrijk()">☆ Belangrijk</button>
+          <button class="btn btn-outline" onclick="clearDagForm()">Wissen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ OMZET ══ -->
+<div class="panel" id="panel-omzet">
+  <div class="g3">
+    <div class="stat-pill"><div class="pill-icon blue">💶</div><div><div class="pill-val" id="soTotaal">€0</div><div class="pill-lbl">Totale omzet</div></div></div>
+    <div class="stat-pill"><div class="pill-icon green">🎯</div><div><div class="pill-val" id="soRest">€0</div><div class="pill-lbl">Resterend tot jaardoel</div></div></div>
+    <div class="stat-pill"><div class="pill-icon cyan">📈</div><div><div class="pill-val" id="soPct">0%</div><div class="pill-lbl">Van jaardoel</div></div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="dot" style="background:var(--green)"></div>Omzet per categorie <span id="omzetYear" style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px"></span></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Vul per categorie het bedrag in dat al geboekt staat — dit is <strong>leidend</strong>. Dagregistraties tellen er automatisch bovenop. Je kunt deze bedragen altijd aanpassen en opnieuw opslaan. Losse dagen aanpassen/verwijderen doe je via <strong>Historie</strong>.</p>
+    <div id="omzetCatRows"></div>
+    <div style="margin-top:14px;display:flex;gap:8px"><button class="btn btn-primary" onclick="saveStartCats()">✓ Opslaan</button></div>
+  </div>
+</div>
+
+<!-- ══ WEEK ══ -->
+<div class="panel" id="panel-week">
+  <div class="card">
+    <div class="card-title"><div class="dot"></div>Weekoverzicht + presentie</div>
+    <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:18px;flex-wrap:wrap">
+      <div class="form-group"><label>Week van (maandag)</label><input type="date" id="weekStart" style="border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none"/></div>
+      <button class="btn btn-primary" onclick="generateWeek()">📊 Genereer</button>
+    </div>
+    <div id="weekTableWrap"></div>
+  </div>
+  <div class="card" id="mailCard" style="display:none">
+    <div class="card-title"><div class="dot" style="background:var(--orange)"></div>Weekrapport — klaar om te sturen</div>
+    <div class="mail-box" id="mailBox"></div>
+    <div style="margin-top:12px"><button class="btn btn-blue" onclick="copyMail()">📋 Kopieer rapport</button></div>
+  </div>
+</div>
+
+<!-- ══ JAAR ══ -->
+<div class="panel" id="panel-jaar">
+  <div class="g4" id="jaarPills" style="margin-bottom:16px"></div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-title"><div class="dot" style="background:var(--orange)"></div>Conversie & KPI's <span id="kpiYear" style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px"></span></div>
+      <div class="g2" id="kpiGrid"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="dot" style="background:var(--green)"></div>Leaderboard — omzet per teamlid <span id="lbYear" style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px"></span></div>
+      <div id="leaderboard"></div>
+    </div>
+  </div>
+  <div id="jaarPersonen"></div>
+</div>
+
+<!-- ══ HISTORIE ══ -->
+<div class="panel" id="panel-historie">
+  <div class="card">
+    <div class="card-title"><div class="dot"></div>Alle dagregistraties <span id="histCount" style="font-weight:400;color:var(--muted);margin-left:4px"></span></div>
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
+      <div class="form-group"><label>📅 Spring naar datum</label><input type="date" id="histJump" onchange="histJumpTo()"/></div>
+      <button class="btn btn-outline btn-sm" id="histFilterBtn" onclick="toggleHistFilter()">⭐ Alleen belangrijke</button>
+      <button class="btn btn-outline btn-sm" onclick="histShowAll()">Toon alle</button>
+    </div>
+    <div class="hist-list" id="histList"></div>
+  </div>
+</div>
+
+<!-- ══ INSTELLINGEN ══ -->
+<div class="panel" id="panel-instellingen">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-title"><div class="dot"></div>Bedrijf & doel</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="form-group"><label>Bedrijfsnaam</label><input type="text" id="set-bedrijf"/></div>
+          <div class="form-group"><label>Dashboard subtitel</label><input type="text" id="set-subtitel"/></div>
+          <div class="form-group"><label>Jaardoel (€)</label><input type="number" id="set-doel" step="1000" min="0"/></div>
+          <button class="btn btn-primary" onclick="saveBedrijf()">✓ Opslaan</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title"><div class="dot" style="background:var(--green)"></div>Data backup</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Download een CSV backup of laad eerder opgeslagen data terug in.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn btn-green" onclick="exportCSV()">⬇ Download CSV</button></div>
+        <div class="form-group"><label>CSV importeren</label><input type="file" id="csvImport" accept=".csv" onchange="importCSV(event)" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px"/></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title"><div class="dot" style="background:var(--cyan)"></div>Teamleden</div>
+        <div id="memberSettings" style="margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px"><button class="btn btn-outline btn-sm" onclick="addMember()">+ Toevoegen</button><button class="btn btn-primary btn-sm" onclick="saveTeam()">✓ Opslaan</button></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title"><div class="dot" style="background:var(--orange)"></div>Omzetcategorieën</div>
+        <div id="catSettings" style="margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px"><button class="btn btn-outline btn-sm" onclick="addCat()">+ Toevoegen</button><button class="btn btn-primary btn-sm" onclick="saveCats()">✓ Opslaan</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const MAANDEN=['Jan','Feb','Mrt','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'];
+const MAANDEN_LANG=['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+
+const DEF={bedrijf:'Techniekwerkt',subtitel:'CCO Dashboard',doel:1000000,categories:['Eenmalige plaatsing','Abonnement bestaand','Abonnement nieuw','Jobboost','CPC','Resellers','CV Database','Overig'],members:['Jesper','Luuk','Nicky'],startCats:{},days:[]};
+
+// CONFIGURE: Vervang dit met jouw Supabase credentials (zie Instellingen > API in Supabase)
+const SUPABASE_URL = 'JOUW_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'JOUW_SUPABASE_ANON_KEY';
+const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let S = JSON.parse(JSON.stringify(DEF));
+let _sbUserId = null;
+
+async function persist() {
+  localStorage.setItem('tw_cco_v1', JSON.stringify(S));
+  if (_sbUserId) {
+    await _sb.from('dashboard_data').upsert(
+      { user_id: _sbUserId, data: S, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    );
+  }
+}
+
+function fmt(n){return Math.round(n||0).toLocaleString('nl-NL');}
+function today(){return new Date().toISOString().split('T')[0];}
+function catKey(n){return n.toLowerCase().replace(/[^a-z0-9]/g,'_');}
+function memberKey(n){return n.toLowerCase().replace(/[^a-z0-9]/g,'_');}
+function intVal(id){const e=document.getElementById(id);return e?(parseInt(e.value)||0):0;}
+function getMonday(d){const dt=new Date(d),day=dt.getDay(),diff=dt.getDate()-day+(day===0?-6:1);return new Date(dt.setDate(diff));}
+function weekNum(d){const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())),dn=dt.getUTCDay()||7;dt.setUTCDate(dt.getUTCDate()+4-dn);const ys=new Date(Date.UTC(dt.getUTCFullYear(),0,1));return Math.ceil((((dt-ys)/86400000)+1)/7);}
+
+// ── BEREKENINGEN ────────────────────────────────────────────────────────────
+function curYear(){return new Date().getFullYear();}
+function daysIn(y){return S.days.filter(d=>(d.datum||'').slice(0,4)==String(y));}
+function dayOmzet(d){return d&&d.cats?Object.values(d.cats).reduce((a,b)=>a+(b||0),0):0;}
+function dayTeamOmzet(d){return d&&d.team?Object.values(d.team).reduce((a,t)=>a+(t.omzet||0),0):0;}
+function startSum(){return Object.values(S.startCats).reduce((a,b)=>a+(b||0),0);}
+function catDaySum(k,y){return daysIn(y||curYear()).reduce((s,d)=>s+(d.cats?.[k]||0),0);}
+function catTotal(k){return (S.startCats[k]||0)+catDaySum(k);}
+function totalOmzet(){return startSum()+daysIn(curYear()).reduce((s,d)=>s+dayOmzet(d),0);}
+
+// ── METER ─────────────────────────────────────────────────────────────────────
+function updateMeter(){
+  const tot=totalOmzet(),doel=S.doel||1000000,pct=Math.min((tot/doel)*100,100);
+  document.getElementById('meterMain').textContent='€'+fmt(tot);
+  document.getElementById('meterSub').textContent='van €'+fmt(doel)+' jaardoel';
+  document.getElementById('meterPct').textContent=pct.toFixed(1).replace('.',',')+'%';
+  document.getElementById('meterRemain').textContent='Nog €'+fmt(Math.max(doel-tot,0))+' te gaan';
+  document.getElementById('barFill').style.width=pct+'%';
+  const so=document.getElementById('soTotaal');if(so)so.textContent='€'+fmt(tot);
+  const sr=document.getElementById('soRest');if(sr)sr.textContent='€'+fmt(Math.max(doel-tot,0));
+  const sp=document.getElementById('soPct');if(sp)sp.textContent=pct.toFixed(1).replace('.',',')+'%';
+}
+
+function renderOmzetCatRows(){
+  const wrap=document.getElementById('omzetCatRows');if(!wrap)return;wrap.innerHTML='';
+  const yl=document.getElementById('omzetYear');if(yl)yl.textContent='('+curYear()+')';
+  S.categories.forEach(cat=>{
+    const k=catKey(cat),base=S.startCats[k]||0,daysum=catDaySum(k),tot=base+daysum;
+    const row=document.createElement('div');row.className='cat-row';
+    row.innerHTML=`<div class="cat-row-name">${cat}</div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="text-align:right"><div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.3px;margin-bottom:2px">HANDMATIG €</div><input type="number" id="omzetcat-${k}" value="${base||''}" placeholder="0" step="1" min="0" oninput="previewOmzetTotals()"/></div>
+        <div style="text-align:right;min-width:110px"><div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.3px;margin-bottom:2px">TOTAAL</div><div style="font-size:18px;font-weight:800;color:var(--navy)" id="omzettot-${k}">€${fmt(tot)}</div><div style="font-size:10px;color:var(--muted)" id="omzetsub-${k}">+ €${fmt(daysum)} uit dagen</div></div>
+      </div>`;
+    wrap.appendChild(row);
+  });
+}
+function previewOmzetTotals(){
+  S.categories.forEach(cat=>{const k=catKey(cat);const base=intVal('omzetcat-'+k);const daysum=catDaySum(k);const t=document.getElementById('omzettot-'+k);if(t)t.textContent='€'+fmt(base+daysum);});
+}
+function saveStartCats(){
+  S.categories.forEach(c=>{const k=catKey(c);S.startCats[k]=intVal('omzetcat-'+k);});
+  persist();updateMeter();buildChart();renderOmzetCatRows();renderKPIs();renderLeaderboard();
+  toast('✓ Omzet opgeslagen');
+}
+
+// ── CONVERSIE & KPI'S ───────────────────────────────────────────────────────
+function renderKPIs(){
+  const grid=document.getElementById('kpiGrid');if(!grid)return;
+  const y=curYear(),dd=daysIn(y);
+  const gebeld=dd.reduce((s,d)=>s+(d.gebeld||0),0);
+  const aGem=dd.reduce((s,d)=>s+(d.afspraken||0),0);
+  const belConv=gebeld>0?(aGem/gebeld*100):0;
+  const yl=document.getElementById('kpiYear');if(yl)yl.textContent='('+y+')';
+  const pct=n=>n.toFixed(1).replace('.',',')+'%';
+  grid.innerHTML=`
+    <div class="stat-pill"><div class="pill-icon blue">📞</div><div><div class="pill-val">${fmt(gebeld)}</div><div class="pill-lbl">Totaal gebeld</div></div></div>
+    <div class="stat-pill"><div class="pill-icon cyan">📅</div><div><div class="pill-val">${fmt(aGem)}</div><div class="pill-lbl">Afspraken gemaakt</div></div></div>
+    <div class="stat-pill"><div class="pill-icon green">🎯</div><div><div class="pill-val">${pct(belConv)}</div><div class="pill-lbl">Bel-conversie (afspraak / gebeld)</div></div></div>`;
+}
+
+// ── LEADERBOARD ─────────────────────────────────────────────────────────────
+function renderLeaderboard(){
+  const wrap=document.getElementById('leaderboard');if(!wrap)return;
+  const y=curYear(),dd=daysIn(y);
+  const yl=document.getElementById('lbYear');if(yl)yl.textContent='('+y+')';
+  const data=S.members.map(m=>{const mk=memberKey(m);return{m,o:dd.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0)};}).sort((a,b)=>b.o-a.o);
+  const tot=data.reduce((s,x)=>s+x.o,0),max=Math.max(...data.map(x=>x.o),1);
+  if(tot===0){wrap.innerHTML='<div class="empty">Nog geen omzet per teamlid geregistreerd.</div>';return;}
+  const medals=['🥇','🥈','🥉'];
+  wrap.innerHTML=data.map((x,i)=>`
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:13px">
+        <span style="font-weight:700;color:var(--navy)">${medals[i]||'&nbsp;&nbsp;&nbsp;'} ${x.m}</span>
+        <span style="font-weight:800;color:var(--navy)">€${fmt(x.o)} <span style="color:var(--muted);font-weight:600;font-size:11px">· ${tot>0?(x.o/tot*100).toFixed(0):0}%</span></span>
+      </div>
+      <div class="bar" style="height:8px"><div class="bar-fill" style="width:${x.o/max*100}%"></div></div>
+    </div>`).join('');
+}
+
+function updateHeader(){
+  document.getElementById('logoIcon').textContent=(S.bedrijf||'T').charAt(0).toUpperCase();
+  document.getElementById('headerTitle').textContent=S.subtitel||'CCO Dashboard';
+  document.getElementById('headerSub').textContent='— '+(S.bedrijf||'Techniekwerkt');
+  document.title=(S.bedrijf||'Techniekwerkt')+' — CCO Dashboard';
+}
+
+// ── CHART ─────────────────────────────────────────────────────────────────────
+let chart=null;
+function buildChart(){
+  const ctx=document.getElementById('omzetChart');if(!ctx)return;
+  if(chart){chart.destroy();chart=null;}
+  const doel=S.doel||1000000,jaar=curYear(),prev=jaar-1;
+  const perCur={},perPrev={};
+  S.days.forEach(d=>{const yr=d.datum.slice(0,4),mo=d.datum.slice(0,7);if(yr==String(jaar))perCur[mo]=(perCur[mo]||0)+dayOmzet(d);else if(yr==String(prev))perPrev[mo]=(perPrev[mo]||0)+dayOmzet(d);});
+  const labels=[],curPoints=[],prevPoints=[],goalPoints=[];
+  let cumul=startSum(),pCumul=0;
+  for(let m=0;m<12;m++){
+    const mm=String(m+1).padStart(2,'0');
+    cumul+=(perCur[`${jaar}-${mm}`]||0);
+    pCumul+=(perPrev[`${prev}-${mm}`]||0);
+    labels.push(MAANDEN[m]);
+    curPoints.push(cumul);
+    prevPoints.push(pCumul);
+    goalPoints.push(Math.round(doel/12*(m+1)));
+  }
+  const hasPrev=Object.keys(perPrev).length>0;
+  const g=ctx.getContext('2d').createLinearGradient(0,0,0,300);
+  g.addColorStop(0,'rgba(59,106,245,.22)');g.addColorStop(1,'rgba(59,106,245,0)');
+  const datasets=[
+    {label:'Omzet '+jaar,data:curPoints,borderColor:'#3b6af5',backgroundColor:g,borderWidth:2.5,pointBackgroundColor:'#3b6af5',pointRadius:4,pointHoverRadius:7,fill:true,tension:.35},
+    {label:'Jaardoel (lineair)',data:goalPoints,borderColor:'#ef4444',borderWidth:1.5,borderDash:[6,4],pointRadius:0,fill:false,tension:0}
+  ];
+  if(hasPrev)datasets.push({label:'Vorig jaar ('+prev+')',data:prevPoints,borderColor:'#9ca3af',borderWidth:2,borderDash:[4,3],pointRadius:0,fill:false,tension:.35});
+  chart=new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{font:{family:'DM Sans',size:12},color:'#6b7280',boxWidth:14,usePointStyle:true}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': €'+fmt(c.parsed.y)}}},
+      scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'DM Sans',size:12},color:'#6b7280'}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'DM Sans',size:11},color:'#6b7280',callback:v=>'€'+fmt(v)},beginAtZero:true}}}
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const c=sb.classList.toggle('collapsed');
+  localStorage.setItem('tw_sb_collapsed',c?'1':'0');
+  setTimeout(()=>{if(chart)chart.resize();},220);
+}
+window.addEventListener('load', async () => {
+  const { data: { session } } = await _sb.auth.getSession();
+  if (!session) { window.location.href = '/login.html'; return; }
+  _sbUserId = session.user.id;
+
+  const emailEl = document.getElementById('sbUserEmail');
+  if (emailEl) emailEl.textContent = session.user.email;
+
+  const { data: row } = await _sb.from('dashboard_data').select('data').eq('user_id', _sbUserId).maybeSingle();
+  if (row?.data) {
+    S = row.data;
+    localStorage.setItem('tw_cco_v1', JSON.stringify(S));
+  } else {
+    const cached = localStorage.getItem('tw_cco_v1');
+    if (cached) { try { S = JSON.parse(cached); await persist(); } catch(e) {} }
+  }
+  if (!Array.isArray(S.days)) S.days = [];
+  if (!S.startCats) S.startCats = {};
+
+  const now = new Date();
+  if (localStorage.getItem('tw_sb_collapsed') === '1') document.getElementById('sidebar').classList.add('collapsed');
+  document.getElementById('todayPill').textContent = now.toLocaleDateString('nl-NL', {weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('dagDatum').value = today();
+  document.getElementById('weekStart').value = getMonday(now).toISOString().split('T')[0];
+  updateHeader(); updateMeter(); renderDagCatFields(); renderTeamGrid(); renderSettings(); renderHistory(); renderKPIs(); renderLeaderboard(); recalcDayTotals();
+  setTimeout(buildChart, 100);
+});
+
+async function logout() {
+  await _sb.auth.signOut();
+  window.location.href = '/login.html';
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+const TAB_NAMES=['dag','omzet','week','jaar','historie','instellingen'];
+function switchTab(name){
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',TAB_NAMES[i]===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='dag')setTimeout(buildChart,50);
+  if(name==='omzet'){updateMeter();renderOmzetCatRows();}
+  if(name==='week')generateWeek();
+  if(name==='jaar')renderJaar();
+  if(name==='historie')renderHistory();
+  if(name==='instellingen')renderSettings();
+}
+
+// ── DAG CAT FIELDS ────────────────────────────────────────────────────────────
+function renderDagCatFields(){
+  const wrap=document.getElementById('dagCatFields');wrap.innerHTML='';
+  const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px';
+  S.categories.forEach(cat=>{const k=catKey(cat),g=document.createElement('div');g.className='form-group';g.innerHTML=`<label>${cat}</label><input type="number" id="dagcat-${k}" placeholder="0" step="1" min="0" oninput="recalcDayTotals()"/>`;grid.appendChild(g);});
+  wrap.appendChild(grid);
+}
+
+// ── TEAM GRID ─────────────────────────────────────────────────────────────────
+const memberStatuses={};
+function renderTeamGrid(){
+  const grid=document.getElementById('teamGrid');grid.innerHTML='';
+  S.members.forEach(m=>{
+    const mk=memberKey(m),div=document.createElement('div');div.className='team-member';
+    div.innerHTML=`<div class="team-header"><div class="team-name-lbl">👤 ${m}</div><span class="badge badge-green" id="tbadge-${mk}">Aanwezig</span></div>
+      <div class="status-btns">
+        <button class="status-btn active-aanwezig" id="sbtn-${mk}-aanwezig" onclick="setStatus('${mk}','aanwezig')">✓ Aanwezig</button>
+        <button class="status-btn" id="sbtn-${mk}-ziek" onclick="setStatus('${mk}','ziek')">🤒 Ziek</button>
+        <button class="status-btn" id="sbtn-${mk}-afwezig" onclick="setStatus('${mk}','afwezig')">— Afwezig</button>
+      </div>
+      <div class="team-stats" id="tstats-${mk}">
+        <div class="team-stat"><label>Gebeld</label><input type="number" id="t-${mk}-gebeld" placeholder="0" min="0" step="1" oninput="recalcDayTotals()"/></div>
+        <div class="team-stat"><label>Afspraken</label><input type="number" id="t-${mk}-afspraken" placeholder="0" min="0" step="1" oninput="recalcDayTotals()"/></div>
+        <div class="team-stat"><label>Omzet €</label><input type="number" id="t-${mk}-omzet" placeholder="0" step="1" min="0" oninput="recalcDayTotals()"/></div>
+      </div>`;
+    grid.appendChild(div);
+    memberStatuses[mk]='aanwezig';
+  });
+  recalcDayTotals();
+}
+
+function setStatus(mk,status){
+  memberStatuses[mk]=status;
+  const badge=document.getElementById('tbadge-'+mk);
+  badge.textContent=status==='aanwezig'?'Aanwezig':status==='ziek'?'Ziek':'Afwezig';
+  badge.className='badge '+(status==='aanwezig'?'badge-green':status==='ziek'?'badge-red':'badge-gray');
+  ['aanwezig','ziek','afwezig'].forEach(s=>{const btn=document.getElementById('sbtn-'+mk+'-'+s);if(btn)btn.className='status-btn'+(status===s?' active-'+status:'');});
+  const stats=document.getElementById('tstats-'+mk);
+  if(stats)stats.style.opacity=status==='afwezig'?'0.4':'1';
+}
+
+// ── LIVE TOTALEN (team -> dagregistratie) ───────────────────────────────────────
+function recalcDayTotals(){
+  let g=0,a=0,teamO=0;
+  S.members.forEach(m=>{const mk=memberKey(m);g+=intVal('t-'+mk+'-gebeld');a+=intVal('t-'+mk+'-afspraken');teamO+=intVal('t-'+mk+'-omzet');});
+  const dg=document.getElementById('dagGebeld');if(dg)dg.textContent=g;
+  const da=document.getElementById('dagAfspraken');if(da)da.textContent=a;
+  let catO=0;S.categories.forEach(c=>{catO+=intVal('dagcat-'+catKey(c));});
+  const ro=document.getElementById('omzetReadout');
+  if(ro){const mismatch=catO!==teamO&&(catO>0||teamO>0)?' &nbsp;<span style="color:var(--orange)">⚠ verschilt</span>':'';ro.innerHTML=`Categorie-omzet: <strong>€${fmt(catO)}</strong> &nbsp;·&nbsp; Team-omzet: <strong>€${fmt(teamO)}</strong>${mismatch}`;}
+}
+
+// ── BELANGRIJK TOGGLE ───────────────────────────────────────────────────────
+let dagBelangrijkState=false;
+function setDagBelangrijk(v){
+  dagBelangrijkState=!!v;
+  const btn=document.getElementById('dagBelangrijkBtn');if(!btn)return;
+  if(dagBelangrijkState){btn.textContent='⭐ Belangrijk';btn.classList.remove('btn-outline');btn.style.cssText='background:#fef3c7;color:#92400e;border:1.5px solid #fde68a';}
+  else{btn.textContent='☆ Belangrijk';btn.style.cssText='';btn.classList.add('btn-outline');}
+}
+function toggleDagBelangrijk(){setDagBelangrijk(!dagBelangrijkState);}
+
+// ── SAVE DAY ──────────────────────────────────────────────────────────────────
+function saveDay(){
+  const datum=document.getElementById('dagDatum').value;
+  if(!datum){toast('❌ Vul een datum in');return;}
+  const cats={};
+  S.categories.forEach(c=>{const k=catKey(c);cats[k]=intVal('dagcat-'+k);});
+  const team={};let gebeld=0,afspraken=0;
+  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('t-'+mk+'-gebeld'),aa=intVal('t-'+mk+'-afspraken'),oo=intVal('t-'+mk+'-omzet');team[mk]={gebeld:gg,afspraken:aa,omzet:oo,status:memberStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;});
+  const day={datum,gebeld,afspraken,notities:document.getElementById('dagNotities').value.trim(),belangrijk:dagBelangrijkState,cats,team};
+  const idx=S.days.findIndex(d=>d.datum===datum);
+  if(idx>=0)S.days[idx]=day;else S.days.push(day);
+  S.days.sort((a,b)=>a.datum.localeCompare(b.datum));
+  persist();updateMeter();buildChart();renderOmzetCatRows();renderKPIs();renderLeaderboard();renderHistory();
+  toast(idx>=0?'✓ Dag bijgewerkt':'✓ Dag opgeslagen');
+}
+
+function clearDagForm(){
+  document.getElementById('dagDatum').value=today();
+  document.getElementById('dagNotities').value='';
+  S.categories.forEach(c=>{const e=document.getElementById('dagcat-'+catKey(c));if(e)e.value='';});
+  S.members.forEach(m=>{const mk=memberKey(m);['gebeld','afspraken','omzet'].forEach(f=>{const e=document.getElementById('t-'+mk+'-'+f);if(e)e.value='';});setStatus(mk,'aanwezig');});
+  setDagBelangrijk(false);
+  recalcDayTotals();
+}
+
+function loadDay(datum){
+  const d=S.days.find(x=>x.datum===datum);if(!d)return;
+  switchTab('dag');
+  document.getElementById('dagDatum').value=d.datum;
+  document.getElementById('dagNotities').value=d.notities||'';
+  setDagBelangrijk(d.belangrijk);
+  S.categories.forEach(c=>{const k=catKey(c);const e=document.getElementById('dagcat-'+k);if(e)e.value=d.cats?.[k]||'';});
+  S.members.forEach(m=>{const mk=memberKey(m);const tm=d.team?.[mk];['gebeld','afspraken','omzet'].forEach(f=>{const e=document.getElementById('t-'+mk+'-'+f);if(e)e.value=tm?.[f]||'';});setStatus(mk,tm?.status||'aanwezig');});
+  recalcDayTotals();
+  toast('✏️ Dag geladen — pas aan en sla opnieuw op');
+}
+
+function deleteDay(datum){
+  if(!confirm('Weet je zeker dat je de registratie van '+datum+' wilt verwijderen?'))return;
+  S.days=S.days.filter(d=>d.datum!==datum);
+  persist();updateMeter();buildChart();renderOmzetCatRows();renderKPIs();renderLeaderboard();renderHistory();
+  toast('🗑 Dag verwijderd');
+}
+
+// ── WEEK ──────────────────────────────────────────────────────────────────────
+function presLabel(status){
+  if(!status||status==='aanwezig')return`<span class="pres-dot dot-green"></span>Aanwezig`;
+  if(status==='ziek')return`<span class="pres-dot dot-red"></span>Ziek`;
+  return`<span class="pres-dot dot-gray"></span>Afwezig`;
+}
+
+function generateWeek(){
+  const sv=document.getElementById('weekStart').value;if(!sv)return;
+  const start=new Date(sv);
+  const days=[];
+  for(let i=0;i<5;i++){const d=new Date(start);d.setDate(d.getDate()+i);const key=d.toISOString().split('T')[0];days.push({date:d,key,d:S.days.find(x=>x.datum===key)});}
+  const tG=days.reduce((s,x)=>s+(x.d?.gebeld||0),0),tA=days.reduce((s,x)=>s+(x.d?.afspraken||0),0),tO=days.reduce((s,x)=>s+dayOmzet(x.d),0);
+  const memberCols=S.members.map(m=>`<th>${m}</th>`).join('');
+  const rows=days.map(({date,d})=>{
+    const ds=date.toLocaleDateString('nl-NL',{weekday:'short',day:'numeric',month:'short'});
+    const dagO=dayOmzet(d);
+    const presCols=S.members.map(m=>{const mk=memberKey(m);return`<td>${presLabel(d?.team?.[mk]?.status||'aanwezig')}</td>`;}).join('');
+    return`<tr><td><strong>${ds}</strong></td><td>${d?.gebeld??'—'}</td><td>${d?.afspraken??'—'}</td><td>€${fmt(dagO)}</td>${presCols}</tr>`;
+  }).join('');
+  const totPresCols=S.members.map(m=>{const mk=memberKey(m);const z=days.filter(x=>x.d?.team?.[mk]?.status==='ziek').length,a=days.filter(x=>x.d?.team?.[mk]?.status==='afwezig').length,p=days.filter(x=>x.d).length-z-a;return`<td>${p}x aanw.${z?` ${z}x ziek`:''}${a?` ${a}x afwezig`:''}</td>`;}).join('');
+  document.getElementById('weekTableWrap').innerHTML=`<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Dag</th><th>Gebeld</th><th>Afspraken gemaakt</th><th>Omzet</th>${memberCols}</tr></thead><tbody>${rows}<tr class="totaal-row"><td>Totaal</td><td>${tG}</td><td>${tA}</td><td>€${fmt(tO)}</td>${totPresCols}</tr></tbody></table></div>`;
+
+  const wl=start.toLocaleDateString('nl-NL',{day:'numeric',month:'long'}),el=new Date(start.getTime()+4*86400000).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
+  const dagR=days.map(({date,d})=>{
+    if(!d)return'';
+    const ds=date.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
+    const dagO=dayOmzet(d),presR=S.members.map(m=>{const mk=memberKey(m);const st=d.team?.[mk]?.status||'aanwezig';return`${m}: ${st.charAt(0).toUpperCase()+st.slice(1)}`;}).join(' | ');
+    let t=`📅 ${ds}\n   Gebeld: ${d.gebeld||0} | Afspraken gemaakt: ${d.afspraken||0}\n   Omzet: €${fmt(dagO)}\n   Presentie: ${presR}\n`;
+    if(d.notities)t+=`   Notities: ${d.notities}\n`;
+    return t;
+  }).filter(Boolean).join('\n');
+  const teamR=S.members.map(m=>{const mk=memberKey(m);const tG2=days.reduce((s,x)=>s+(x.d?.team?.[mk]?.gebeld||0),0),tA2=days.reduce((s,x)=>s+(x.d?.team?.[mk]?.afspraken||0),0),tO2=days.reduce((s,x)=>s+(x.d?.team?.[mk]?.omzet||0),0),z=days.filter(x=>x.d?.team?.[mk]?.status==='ziek').length,af=days.filter(x=>x.d?.team?.[mk]?.status==='afwezig').length;return`${m}: ${tG2} gebeld | ${tA2} afspraken | €${fmt(tO2)} omzet${z?` | ${z}x ziek`:''}${af?` | ${af}x afwezig`:''}`;}).join('\n');
+  const tot=totalOmzet(),doel=S.doel||1000000;
+  const mail=`Weekrapport ${S.bedrijf||'Techniekwerkt'} — week ${weekNum(start)} (${wl} t/m ${el})\n\nBeste,\n\nHierbij het weekoverzicht.\n\n${'━'.repeat(25)}\nWEEKCIJFERS\n${'━'.repeat(25)}\nTotaal gebeld:         ${tG}\nAfspraken gemaakt:     ${tA}\nOmzet deze week:       €${fmt(tO)}\nCumulatieve omzet:     €${fmt(tot)}\nVoortgang naar €${fmt(doel)}: ${((tot/doel)*100).toFixed(1).replace('.',',')}%\n\n${'━'.repeat(25)}\nPER DAG (incl. presentie)\n${'━'.repeat(25)}\n${dagR}\n${'━'.repeat(25)}\nTEAM WEEKCIJFERS\n${'━'.repeat(25)}\n${teamR}\n\nMet vriendelijke groet,\n${S.members[0]||'Jesper'}`;
+  document.getElementById('mailBox').textContent=mail;
+  document.getElementById('mailCard').style.display='block';
+}
+function copyMail(){navigator.clipboard.writeText(document.getElementById('mailBox').textContent);toast('📋 Rapport gekopieerd');}
+
+// ── JAARCIJFERS ───────────────────────────────────────────────────────────────
+function renderJaar(){
+  const jaar=curYear(),yd=daysIn(jaar);
+  const totGebeld=yd.reduce((s,d)=>s+(d.gebeld||0),0);
+  const totAfspraken=yd.reduce((s,d)=>s+(d.afspraken||0),0);
+  const totOmzet=totalOmzet();
+
+  document.getElementById('jaarPills').innerHTML=`
+    <div class="stat-pill"><div class="pill-icon blue">📞</div><div><div class="pill-val">${fmt(totGebeld)}</div><div class="pill-lbl">Totaal gebeld</div></div></div>
+    <div class="stat-pill"><div class="pill-icon cyan">📅</div><div><div class="pill-val">${fmt(totAfspraken)}</div><div class="pill-lbl">Afspraken gemaakt</div></div></div>
+    <div class="stat-pill"><div class="pill-icon green">💶</div><div><div class="pill-val">€${fmt(totOmzet)}</div><div class="pill-lbl">Totale omzet</div></div></div>`;
+
+  const wrap=document.getElementById('jaarPersonen');wrap.innerHTML='';
+  S.members.forEach(m=>{
+    const mk=memberKey(m);
+    const totG=yd.reduce((s,d)=>s+(d.team?.[mk]?.gebeld||0),0);
+    const totA=yd.reduce((s,d)=>s+(d.team?.[mk]?.afspraken||0),0);
+    const totO=yd.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0);
+    const dagMet=yd.filter(d=>d.team?.[mk]);
+    const aanw=dagMet.filter(d=>!d.team[mk].status||d.team[mk].status==='aanwezig').length;
+    const ziek=dagMet.filter(d=>d.team[mk].status==='ziek').length;
+    const afwez=dagMet.filter(d=>d.team[mk].status==='afwezig').length;
+
+    const maandData=Array.from({length:12},(_,mi)=>{
+      const key=`${jaar}-${String(mi+1).padStart(2,'0')}`;
+      const md=S.days.filter(d=>d.datum.startsWith(key)&&d.team?.[mk]);
+      return{
+        g:md.reduce((s,d)=>s+(d.team[mk]?.gebeld||0),0),
+        a:md.reduce((s,d)=>s+(d.team[mk]?.afspraken||0),0),
+        o:md.reduce((s,d)=>s+(d.team[mk]?.omzet||0),0),
+        aanw:md.filter(d=>!d.team[mk].status||d.team[mk].status==='aanwezig').length,
+        ziek:md.filter(d=>d.team[mk].status==='ziek').length,
+        afwez:md.filter(d=>d.team[mk].status==='afwezig').length,
+      };
+    });
+
+    const maandRows=maandData.map((md,mi)=>`
+      <tr>
+        <td><strong>${MAANDEN_LANG[mi]}</strong></td>
+        <td>${md.g||'—'}</td><td>${md.a||'—'}</td><td>${md.o?'€'+fmt(md.o):'—'}</td>
+        <td><span class="pres-dot dot-green"></span>${md.aanw}</td>
+        <td><span class="pres-dot dot-red"></span>${md.ziek}</td>
+        <td><span class="pres-dot dot-gray"></span>${md.afwez}</td>
+      </tr>`).join('');
+
+    const card=document.createElement('div');card.className='persoon-card';
+    card.innerHTML=`
+      <div class="persoon-header"><div class="persoon-naam">👤 ${m}</div><div style="color:rgba(255,255,255,.6);font-size:13px">${jaar}</div></div>
+      <div class="persoon-totalen">
+        <div class="persoon-stat"><div class="persoon-stat-val">${fmt(totG)}</div><div class="persoon-stat-lbl">Gebeld</div></div>
+        <div class="persoon-stat"><div class="persoon-stat-val">${fmt(totA)}</div><div class="persoon-stat-lbl">Afspraken gemaakt</div></div>
+        <div class="persoon-stat"><div class="persoon-stat-val">€${fmt(totO)}</div><div class="persoon-stat-lbl">Omzet</div></div>
+        <div class="persoon-stat"><div class="persoon-stat-val">${aanw}d / ${ziek}z / ${afwez}a</div><div class="persoon-stat-lbl">Aanw. / Ziek / Afwez.</div></div>
+      </div>
+      <div class="persoon-aanw">
+        <div class="aanw-item"><span class="pres-dot dot-green"></span><strong>${aanw}</strong>&nbsp;dagen aanwezig</div>
+        <div class="aanw-item"><span class="pres-dot dot-red"></span><strong>${ziek}</strong>&nbsp;dagen ziek</div>
+        <div class="aanw-item"><span class="pres-dot dot-gray"></span><strong>${afwez}</strong>&nbsp;dagen afwezig</div>
+      </div>
+      <div class="maand-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Maand</th><th>Gebeld</th><th>Afspraken</th><th>Omzet</th><th>Aanwezig</th><th>Ziek</th><th>Afwezig</th></tr></thead>
+          <tbody>${maandRows}
+          <tr class="totaal-row"><td>Totaal</td><td>${fmt(totG)}</td><td>${fmt(totA)}</td><td>€${fmt(totO)}</td><td>${aanw}</td><td>${ziek}</td><td>${afwez}</td></tr>
+          </tbody>
+        </table>
+      </div>`;
+    wrap.appendChild(card);
+  });
+  renderKPIs();renderLeaderboard();
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────────────────
+let histExpanded=null,histOnlyImportant=false,hBelangrijkState=false;const hStatuses={};
+
+function renderHistory(){
+  const list=document.getElementById('histList');
+  document.getElementById('histCount').textContent=`(${S.days.length})`;
+  const fb=document.getElementById('histFilterBtn');
+  if(fb)fb.style.cssText=histOnlyImportant?'background:#fef3c7;color:#92400e;border:1.5px solid #fde68a':'';
+  if(!S.days.length){list.innerHTML='<div class="empty">Nog geen registraties.</div>';return;}
+  let days=[...S.days].reverse();
+  if(histOnlyImportant)days=days.filter(d=>d.belangrijk);
+  if(!days.length){list.innerHTML='<div class="empty">Geen dagen als belangrijk gemarkeerd.</div>';return;}
+  list.innerHTML=days.map(d=>histItemHTML(d)).join('');
+  if(histExpanded){const el=document.getElementById('hist-'+histExpanded);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});}
+}
+
+function histItemHTML(d){
+  const dagO=dayOmzet(d),expanded=histExpanded===d.datum;
+  const statusIcons=S.members.map(m=>{const mk=memberKey(m);const st=d.team?.[mk]?.status||'aanwezig';const icon=st==='aanwezig'?'🟢':st==='ziek'?'🔴':'⚪';return`${icon}${m}`;}).join(' ');
+  const star=d.belangrijk?'⭐ ':'';
+  return`<div class="hist-item" id="hist-${d.datum}" style="flex-direction:column;align-items:stretch">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div class="hist-body" onclick="toggleHistDetail('${d.datum}')">
+        <div class="hist-date">${star}${new Date(d.datum+'T12:00:00').toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+        <div class="hist-row">
+          <span class="hist-stat">📞 <strong>${d.gebeld||0}</strong> gebeld</span>
+          <span class="hist-stat">📅 <strong>${d.afspraken||0}</strong> afspraken</span>
+          <span class="hist-stat">💶 <strong>€${fmt(dagO)}</strong></span>
+          <span class="hist-stat" style="color:var(--muted)">${statusIcons}</span>
+        </div>
+        ${d.notities?`<div style="font-size:12px;color:var(--muted);margin-top:4px">${d.notities.slice(0,90)}${d.notities.length>90?'…':''}</div>`:''}
+      </div>
+      <div class="hist-actions">
+        <button class="btn btn-outline btn-sm" onclick="toggleHistDetail('${d.datum}')">${expanded?'▲ Sluiten':'▼ Bekijk / bewerk'}</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteDay('${d.datum}')">🗑</button>
+      </div>
+    </div>
+    ${expanded?histEditorHTML(d):''}
+  </div>`;
+}
+
+function histEditorHTML(d){
+  const teamHTML=S.members.map(m=>{
+    const mk=memberKey(m),tm=d.team?.[mk]||{},st=tm.status||'aanwezig';
+    return`<div class="team-member">
+      <div class="team-header"><div class="team-name-lbl">👤 ${m}</div></div>
+      <div class="status-btns">
+        <button class="status-btn${st==='aanwezig'?' active-aanwezig':''}" id="hsbtn-${mk}-aanwezig" onclick="hSetStatus('${mk}','aanwezig')">✓ Aanwezig</button>
+        <button class="status-btn${st==='ziek'?' active-ziek':''}" id="hsbtn-${mk}-ziek" onclick="hSetStatus('${mk}','ziek')">🤒 Ziek</button>
+        <button class="status-btn${st==='afwezig'?' active-afwezig':''}" id="hsbtn-${mk}-afwezig" onclick="hSetStatus('${mk}','afwezig')">— Afwezig</button>
+      </div>
+      <div class="team-stats">
+        <div class="team-stat"><label>Gebeld</label><input type="number" id="h-t-${mk}-gebeld" value="${tm.gebeld||''}" min="0" step="1" placeholder="0"/></div>
+        <div class="team-stat"><label>Afspraken</label><input type="number" id="h-t-${mk}-afspraken" value="${tm.afspraken||''}" min="0" step="1" placeholder="0"/></div>
+        <div class="team-stat"><label>Omzet €</label><input type="number" id="h-t-${mk}-omzet" value="${tm.omzet||''}" min="0" step="1" placeholder="0"/></div>
+      </div>
+    </div>`;
+  }).join('');
+  const catHTML=S.categories.map(c=>{const k=catKey(c);return`<div class="form-group"><label>${c}</label><input type="number" id="h-dagcat-${k}" value="${d.cats?.[k]||''}" min="0" step="1" placeholder="0"/></div>`;}).join('');
+  return`<div class="hist-detail">
+    <div class="g2">
+      <div><div class="sec-lbl" style="margin-top:0;padding-top:0;border:none">Team</div>${teamHTML}</div>
+      <div>
+        <div class="sec-lbl" style="margin-top:0;padding-top:0;border:none">Omzet per categorie (€)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${catHTML}</div>
+        <div class="form-group" style="margin-top:10px"><label>Notities</label><textarea id="h-notities">${(d.notities||'').replace(/</g,'&lt;')}</textarea></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn btn-primary btn-sm" onclick="saveHistDay('${d.datum}')">✓ Wijzigingen opslaan</button>
+      <button class="btn btn-outline btn-sm" id="hBelBtn" onclick="hToggleBelangrijk()" style="${hBelangrijkState?'background:#fef3c7;color:#92400e;border:1.5px solid #fde68a':''}">${hBelangrijkState?'⭐ Belangrijk':'☆ Belangrijk'}</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteDay('${d.datum}')">🗑 Verwijderen</button>
+    </div>
+  </div>`;
+}
+
+function toggleHistDetail(datum){
+  if(histExpanded===datum){histExpanded=null;}
+  else{
+    histExpanded=datum;
+    const d=S.days.find(x=>x.datum===datum);
+    S.members.forEach(m=>{const mk=memberKey(m);hStatuses[mk]=d?.team?.[mk]?.status||'aanwezig';});
+    hBelangrijkState=!!d?.belangrijk;
+  }
+  renderHistory();
+}
+
+function hSetStatus(mk,status){
+  hStatuses[mk]=status;
+  ['aanwezig','ziek','afwezig'].forEach(s=>{const b=document.getElementById('hsbtn-'+mk+'-'+s);if(b)b.className='status-btn'+(status===s?' active-'+status:'');});
+}
+
+function hToggleBelangrijk(){
+  hBelangrijkState=!hBelangrijkState;
+  const b=document.getElementById('hBelBtn');
+  if(b){if(hBelangrijkState){b.textContent='⭐ Belangrijk';b.style.cssText='background:#fef3c7;color:#92400e;border:1.5px solid #fde68a';}else{b.textContent='☆ Belangrijk';b.style.cssText='';}}
+}
+
+function saveHistDay(datum){
+  const idx=S.days.findIndex(d=>d.datum===datum);if(idx<0)return;
+  const cats={};S.categories.forEach(c=>{const k=catKey(c);cats[k]=intVal('h-dagcat-'+k);});
+  const team={};let gebeld=0,afspraken=0;
+  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('h-t-'+mk+'-gebeld'),aa=intVal('h-t-'+mk+'-afspraken'),oo=intVal('h-t-'+mk+'-omzet');team[mk]={gebeld:gg,afspraken:aa,omzet:oo,status:hStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;});
+  S.days[idx]={datum,gebeld,afspraken,notities:(document.getElementById('h-notities')?.value||'').trim(),belangrijk:hBelangrijkState,cats,team};
+  persist();updateMeter();buildChart();renderOmzetCatRows();renderKPIs();renderLeaderboard();renderHistory();
+  toast('✓ Dag bijgewerkt');
+}
+
+function histJumpTo(){
+  const v=document.getElementById('histJump').value;if(!v)return;
+  if(!S.days.some(x=>x.datum===v)){toast('Geen registratie op deze datum');return;}
+  histOnlyImportant=false;histExpanded=null;toggleHistDetail(v);
+}
+function toggleHistFilter(){histOnlyImportant=!histOnlyImportant;renderHistory();}
+function histShowAll(){histOnlyImportant=false;histExpanded=null;const hj=document.getElementById('histJump');if(hj)hj.value='';renderHistory();}
+
+// ── CSV ───────────────────────────────────────────────────────────────────────
+function exportCSV(){
+  const catHeaders=S.categories.map(c=>`cat_${catKey(c)}`);
+  const memberHeaders=S.members.flatMap(m=>[`${memberKey(m)}_gebeld`,`${memberKey(m)}_afspraken`,`${memberKey(m)}_omzet`,`${memberKey(m)}_status`]);
+  const headers=['datum','gebeld','afspraken','notities',...catHeaders,...memberHeaders,'belangrijk'];
+  const rows=S.days.map(d=>{
+    const base=[d.datum,d.gebeld||0,d.afspraken||0,`"${(d.notities||'').replace(/"/g,'""')}"`];
+    const cats=S.categories.map(c=>d.cats?.[catKey(c)]||0);
+    const members=S.members.flatMap(m=>{const mk=memberKey(m);return[d.team?.[mk]?.gebeld||0,d.team?.[mk]?.afspraken||0,d.team?.[mk]?.omzet||0,d.team?.[mk]?.status||'aanwezig'];});
+    return[...base,...cats,...members,d.belangrijk?1:0].join(',');
+  });
+  const startStr=S.categories.map(c=>`startcat_${catKey(c)}=${S.startCats[catKey(c)]||0}`).join(',');
+  const configRow=`#CONFIG,bedrijf="${S.bedrijf}",subtitel="${S.subtitel}",doel=${S.doel},${S.categories.map(c=>`cat="${c}"`).join(',')},${S.members.map(m=>`member="${m}"`).join(',')},${startStr}`;
+  const csv=[configRow,headers.join(','),...rows].join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`${S.bedrijf||'dashboard'}_backup_${today()}.csv`;a.click();
+  URL.revokeObjectURL(url);
+  toast('✓ CSV gedownload');
+}
+
+function importCSV(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const lines=e.target.result.split('\n').filter(l=>l.trim());
+      const configLine=lines.find(l=>l.startsWith('#CONFIG'));
+      if(!configLine){toast('❌ Geen geldig backup bestand');return;}
+      const bM=configLine.match(/bedrijf="([^"]*)"/);if(bM)S.bedrijf=bM[1];
+      const sM=configLine.match(/subtitel="([^"]*)"/);if(sM)S.subtitel=sM[1];
+      const dM=configLine.match(/doel=(\d+)/);if(dM)S.doel=parseInt(dM[1]);
+      S.categories=[...configLine.matchAll(/cat="([^"]*)"/g)].map(m=>m[1]);
+      S.members=[...configLine.matchAll(/member="([^"]*)"/g)].map(m=>m[1]);
+      S.startCats={};
+      [...configLine.matchAll(/startcat_([^=,]+)=(\d+)/g)].forEach(m=>{S.startCats[m[1]]=parseInt(m[2])||0;});
+      const catKeys=S.categories.map(c=>catKey(c)),memberKeys=S.members.map(m=>memberKey(m));
+      S.days=lines.filter(l=>!l.startsWith('#')&&!l.startsWith('datum')).map(line=>{
+        const cols=line.split(',');const datum=cols[0];if(!datum||datum.length!==10)return null;
+        const cats={};catKeys.forEach((k,i)=>{cats[k]=parseInt(cols[4+i])||0;});
+        const team={};memberKeys.forEach((mk,i)=>{const base=4+catKeys.length+(i*4);team[mk]={gebeld:parseInt(cols[base])||0,afspraken:parseInt(cols[base+1])||0,omzet:parseInt(cols[base+2])||0,status:cols[base+3]||'aanwezig'};});
+        const belIdx=4+catKeys.length+memberKeys.length*4;
+        return{datum,gebeld:parseInt(cols[1])||0,afspraken:parseInt(cols[2])||0,notities:(cols[3]||'').replace(/^"|"$/g,'').replace(/""/g,'"'),belangrijk:cols[belIdx]==='1',cats,team};
+      }).filter(Boolean);
+      S.days.sort((a,b)=>a.datum.localeCompare(b.datum));
+      persist();updateHeader();updateMeter();renderDagCatFields();renderTeamGrid();renderSettings();renderHistory();renderKPIs();renderLeaderboard();renderOmzetCatRows();buildChart();
+      toast('✓ '+S.days.length+' dagen teruggezet');
+      event.target.value='';
+    }catch(err){toast('❌ Fout: '+err.message);}
+  };
+  reader.readAsText(file);
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+function renderSettings(){
+  document.getElementById('set-bedrijf').value=S.bedrijf||'';
+  document.getElementById('set-subtitel').value=S.subtitel||'';
+  document.getElementById('set-doel').value=S.doel||1000000;
+  const mw=document.getElementById('memberSettings');mw.innerHTML='';
+  S.members.forEach((m,i)=>{const row=document.createElement('div');row.className='set-row';row.innerHTML=`<input type="text" value="${m}" id="mem-${i}"/><button class="btn btn-danger btn-sm" onclick="removeMember(${i})">✕</button>`;mw.appendChild(row);});
+  const cw=document.getElementById('catSettings');cw.innerHTML='';
+  S.categories.forEach((c,i)=>{const row=document.createElement('div');row.className='set-row';row.innerHTML=`<input type="text" value="${c}" id="cat-${i}"/><button class="btn btn-danger btn-sm" onclick="removeCat(${i})">✕</button>`;cw.appendChild(row);});
+}
+function saveBedrijf(){S.bedrijf=document.getElementById('set-bedrijf').value.trim()||'Techniekwerkt';S.subtitel=document.getElementById('set-subtitel').value.trim()||'CCO Dashboard';S.doel=parseInt(document.getElementById('set-doel').value)||1000000;persist();updateHeader();updateMeter();buildChart();toast('✓ Opgeslagen');}
+function saveTeam(){const n=S.members.map((_,i)=>document.getElementById('mem-'+i)?.value.trim()).filter(Boolean);S.members=n.length?n:S.members;persist();renderTeamGrid();renderSettings();toast('✓ Team opgeslagen');}
+function addMember(){S.members.push('Nieuw teamlid');renderSettings();}
+function removeMember(i){if(S.members.length<=1){toast('Minimaal 1 teamlid');return;}S.members.splice(i,1);renderSettings();}
+function saveCats(){const n=S.categories.map((_,i)=>document.getElementById('cat-'+i)?.value.trim()).filter(Boolean);S.categories=n.length?n:S.categories;persist();renderDagCatFields();renderOmzetCatRows();renderSettings();recalcDayTotals();toast('✓ Categorieën opgeslagen');}
+function addCat(){S.categories.push('Nieuwe categorie');renderSettings();}
+function removeCat(i){if(S.categories.length<=1){toast('Minimaal 1 categorie');return;}S.categories.splice(i,1);renderSettings();}
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+</script>
+</body>
+</html>
