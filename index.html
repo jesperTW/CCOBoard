@@ -300,6 +300,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
         </div>
       </div>
       <div class="card" style="margin-top:16px">
+        <div class="card-title"><div class="dot" style="background:var(--green)"></div>Vorig jaar omzet <span id="prevYearLbl" style="font-weight:400;color:var(--muted);margin-left:4px"></span></div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Cumulatieve omzet per maand (ex btw). Wordt automatisch vervangen door echte data zodra je in het volgende jaar zit.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px" id="prevYearFields"></div>
+        <button class="btn btn-primary btn-sm" onclick="savePrevYear()">✓ Opslaan</button>
+      </div>
+      <div class="card" style="margin-top:16px">
         <div class="card-title"><div class="dot" style="background:var(--green)"></div>Data backup</div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Download een CSV backup of laad eerder opgeslagen data terug in.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn btn-green" onclick="exportCSV()">⬇ Download CSV</button></div>
@@ -344,7 +350,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
 const MAANDEN=['Jan','Feb','Mrt','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'];
 const MAANDEN_LANG=['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
 
-const DEF={bedrijf:'Techniekwerkt',subtitel:'CCO Dashboard',doel:1000000,categories:['Eenmalige plaatsing','Abonnement bestaand','Abonnement nieuw','Jobboost','CPC','Resellers','CV Database','Overig'],members:['Jesper','Luuk','Nicky'],startCats:{},days:[]};
+const DEF={bedrijf:'Techniekwerkt',subtitel:'CCO Dashboard',doel:1000000,categories:['Eenmalige plaatsing','Abonnement bestaand','Abonnement nieuw','Jobboost','CPC','Resellers','CV Database','Overig'],members:['Jesper','Luuk','Nicky'],startCats:{},days:[],prevYearYear:2025,prevYearCumulative:[81753,114074,178017,243474,326325,371000,371000,470000,510000,532000,572000,714000]};
 
 // CONFIGURE: Vervang dit met jouw Supabase credentials (zie Instellingen > API in Supabase)
 const SUPABASE_URL = 'https://pbjzojhidgulctxniuix.supabase.co';
@@ -465,27 +471,36 @@ function buildChart(){
   const ctx=document.getElementById('omzetChart');if(!ctx)return;
   if(chart){chart.destroy();chart=null;}
   const doel=S.doel||1000000,jaar=curYear(),prev=jaar-1;
-  const perCur={},perPrev={};
-  S.days.forEach(d=>{const yr=d.datum.slice(0,4),mo=d.datum.slice(0,7);if(yr==String(jaar))perCur[mo]=(perCur[mo]||0)+dayOmzet(d);else if(yr==String(prev))perPrev[mo]=(perPrev[mo]||0)+dayOmzet(d);});
+  const perCur={};
+  S.days.forEach(d=>{const yr=d.datum.slice(0,4),mo=d.datum.slice(0,7);if(yr==String(jaar))perCur[mo]=(perCur[mo]||0)+dayOmzet(d);});
   const labels=[],curPoints=[],prevPoints=[],goalPoints=[];
-  let cumul=startSum(),pCumul=0;
+  let cumul=startSum();
   for(let m=0;m<12;m++){
     const mm=String(m+1).padStart(2,'0');
     cumul+=(perCur[`${jaar}-${mm}`]||0);
-    pCumul+=(perPrev[`${prev}-${mm}`]||0);
     labels.push(MAANDEN[m]);
     curPoints.push(cumul);
-    prevPoints.push(pCumul);
     goalPoints.push(Math.round(doel/12*(m+1)));
   }
-  const hasPrev=Object.keys(perPrev).length>0;
+  // Vorig jaar: gebruik handmatig ingevoerde cumulatieve maandcijfers als het jaar klopt,
+  // anders bereken vanuit dagdata (werkt automatisch vanaf 2027 met 2026-data)
+  let prevPoints2=[], hasPrev=false;
+  const hasPrevYearData=Array.isArray(S.prevYearCumulative)&&S.prevYearCumulative.length===12&&S.prevYearCumulative.some(v=>v>0);
+  if(hasPrevYearData&&(S.prevYearYear||0)===prev){
+    prevPoints2=S.prevYearCumulative.map(Number);hasPrev=true;
+  } else {
+    const perPrev={};
+    S.days.forEach(d=>{const yr=d.datum.slice(0,4),mo=d.datum.slice(0,7);if(yr==String(prev))perPrev[mo]=(perPrev[mo]||0)+dayOmzet(d);});
+    hasPrev=Object.keys(perPrev).length>0;
+    if(hasPrev){let pc=0;for(let m=0;m<12;m++){const mm=String(m+1).padStart(2,'0');pc+=(perPrev[`${prev}-${mm}`]||0);prevPoints2.push(pc);}}
+  }
   const g=ctx.getContext('2d').createLinearGradient(0,0,0,300);
   g.addColorStop(0,'rgba(59,106,245,.22)');g.addColorStop(1,'rgba(59,106,245,0)');
   const datasets=[
     {label:'Omzet '+jaar,data:curPoints,borderColor:'#3b6af5',backgroundColor:g,borderWidth:2.5,pointBackgroundColor:'#3b6af5',pointRadius:4,pointHoverRadius:7,fill:true,tension:.35},
     {label:'Jaardoel (lineair)',data:goalPoints,borderColor:'#ef4444',borderWidth:1.5,borderDash:[6,4],pointRadius:0,fill:false,tension:0}
   ];
-  if(hasPrev)datasets.push({label:'Vorig jaar ('+prev+')',data:prevPoints,borderColor:'#9ca3af',borderWidth:2,borderDash:[4,3],pointRadius:0,fill:false,tension:.35});
+  if(hasPrev)datasets.push({label:'Vorig jaar ('+prev+')',data:prevPoints2,borderColor:'#10b981',borderWidth:2,borderDash:[5,4],pointRadius:0,fill:false,tension:.35});
   chart=new Chart(ctx,{
     type:'line',
     data:{labels,datasets},
@@ -605,7 +620,7 @@ function switchTab(name){
   if(name==='week')generateWeek();
   if(name==='jaar')renderJaar();
   if(name==='historie')renderHistory();
-  if(name==='instellingen'){renderSettings();renderMFAStatus();}
+  if(name==='instellingen'){renderSettings();renderPrevYearFields();renderMFAStatus();}
 }
 
 // ── DAG CAT FIELDS ────────────────────────────────────────────────────────────
@@ -1013,6 +1028,19 @@ function saveCats(){const n=S.categories.map((_,i)=>document.getElementById('cat
 function addCat(){S.categories.push('Nieuwe categorie');renderSettings();}
 function removeCat(i){if(S.categories.length<=1){toast('Minimaal 1 categorie');return;}S.categories.splice(i,1);renderSettings();}
 
+function renderPrevYearFields(){
+  const lbl=document.getElementById('prevYearLbl');
+  if(lbl)lbl.textContent='('+(S.prevYearYear||curYear()-1)+')';
+  const wrap=document.getElementById('prevYearFields');if(!wrap)return;
+  const vals=S.prevYearCumulative||Array(12).fill(0);
+  wrap.innerHTML=MAANDEN.map((m,i)=>`<div class="form-group"><label>${m}</label><input type="number" id="pvy-${i}" value="${vals[i]||''}" placeholder="0" step="1" min="0"/></div>`).join('');
+}
+function savePrevYear(){
+  S.prevYearYear=curYear()-1;
+  S.prevYearCumulative=MAANDEN.map((_,i)=>parseInt(document.getElementById('pvy-'+i)?.value)||0);
+  persist();buildChart();
+  toast('✓ Vorig jaar opgeslagen');
+}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 </script>
 </body>
