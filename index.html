@@ -535,6 +535,12 @@ window.addEventListener('load', async () => {
   }
   if (!Array.isArray(S.days)) S.days = [];
   if (!S.startCats) S.startCats = {};
+  // Migratie: vul ontbrekende velden aan vanuit DEF
+  if (!S.prevYearCumulative || !S.prevYearCumulative.some(v=>v>0)) {
+    S.prevYearCumulative = DEF.prevYearCumulative;
+    S.prevYearYear = DEF.prevYearYear;
+    await persist();
+  }
 
   const now = new Date();
   if (localStorage.getItem('tw_sb_collapsed') === '1') document.getElementById('sidebar').classList.add('collapsed');
