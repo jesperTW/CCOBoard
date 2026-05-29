@@ -305,6 +305,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn btn-green" onclick="exportCSV()">⬇ Download CSV</button></div>
         <div class="form-group"><label>CSV importeren</label><input type="file" id="csvImport" accept=".csv" onchange="importCSV(event)" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px"/></div>
       </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title"><div class="dot" style="background:var(--navy)"></div>Beveiliging</div>
+        <div id="mfaStatus" style="font-size:13px;color:var(--muted);margin-bottom:14px">Bezig met laden...</div>
+        <div id="mfaEnrollSection" style="display:none">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Scan de QR-code met <strong>Google Authenticator</strong> of <strong>Authy</strong>.</p>
+          <div id="mfaQR" style="margin-bottom:12px;text-align:center"></div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label>Bevestig met 6-cijferige code</label>
+            <input type="text" id="mfaCode" placeholder="000000" maxlength="6" inputmode="numeric" style="letter-spacing:6px;font-size:18px;text-align:center"/>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="confirmMFA()">✓ Authenticator activeren</button>
+          <button class="btn btn-outline btn-sm" style="margin-left:8px" onclick="cancelMFA()">Annuleren</button>
+        </div>
+        <div id="mfaActions"></div>
+      </div>
     </div>
     <div>
       <div class="card">
@@ -520,6 +535,65 @@ async function logout() {
   window.location.href = '/login.html';
 }
 
+// ── MFA / AUTHENTICATOR ──────────────────────────────────────────────────────
+let _mfaEnrollId = null, _mfaEnrollSecret = null;
+
+async function renderMFAStatus() {
+  const statusEl = document.getElementById('mfaStatus');
+  const actionsEl = document.getElementById('mfaActions');
+  if (!statusEl) return;
+  const { data } = await _sb.auth.mfa.listFactors();
+  const verified = data?.totp?.find(f => f.status === 'verified');
+  if (verified) {
+    statusEl.innerHTML = '<span style="color:var(--green);font-weight:700">🔐 Authenticator actief</span> — je account is beveiligd met 2-staps verificatie.';
+    actionsEl.innerHTML = '<button class="btn btn-danger btn-sm" onclick="removeMFA(\'' + verified.id + '\')">Authenticator verwijderen</button>';
+  } else {
+    statusEl.innerHTML = '<span style="color:var(--orange);font-weight:600">⚠ Geen authenticator ingesteld</span> — je gebruikt alleen een wachtwoord.';
+    actionsEl.innerHTML = '<button class="btn btn-primary btn-sm" onclick="startMFA()">🔐 Authenticator instellen</button>';
+  }
+}
+
+async function startMFA() {
+  document.getElementById('mfaActions').innerHTML = '<span style="font-size:13px;color:var(--muted)">Bezig met genereren...</span>';
+  const { data, error } = await _sb.auth.mfa.enroll({ factorType: 'totp', issuer: 'ccoboard.nl' });
+  if (error) { toast('❌ ' + error.message); return; }
+  _mfaEnrollId = data.id;
+  const qrDiv = document.getElementById('mfaQR');
+  qrDiv.innerHTML = '<img src="' + data.totp.qr_code + '" style="width:180px;height:180px;border:4px solid var(--border);border-radius:8px"/><br/><span style="font-size:10px;color:var(--muted);word-break:break-all;display:block;margin-top:6px;max-width:240px">Of voer handmatig in: ' + data.totp.secret + '</span>';
+  document.getElementById('mfaEnrollSection').style.display = 'block';
+  document.getElementById('mfaActions').innerHTML = '';
+  document.getElementById('mfaCode').focus();
+}
+
+async function confirmMFA() {
+  const code = document.getElementById('mfaCode').value.replace(/\s/g,'');
+  if (code.length !== 6) { toast('Vul een 6-cijferige code in'); return; }
+  const { data: ch, error: chErr } = await _sb.auth.mfa.challenge({ factorId: _mfaEnrollId });
+  if (chErr) { toast('❌ ' + chErr.message); return; }
+  const { error: vErr } = await _sb.auth.mfa.verify({ factorId: _mfaEnrollId, challengeId: ch.id, code });
+  if (vErr) { toast('❌ Ongeldige code — probeer opnieuw'); document.getElementById('mfaCode').value=''; return; }
+  document.getElementById('mfaEnrollSection').style.display='none';
+  document.getElementById('mfaCode').value='';
+  toast('🔐 Authenticator geactiveerd!');
+  renderMFAStatus();
+}
+
+async function removeMFA(factorId) {
+  if (!confirm('Weet je zeker dat je de authenticator wilt verwijderen?')) return;
+  const { error } = await _sb.auth.mfa.unenroll({ factorId });
+  if (error) { toast('❌ ' + error.message); return; }
+  toast('Authenticator verwijderd');
+  renderMFAStatus();
+}
+
+function cancelMFA() {
+  if (_mfaEnrollId) _sb.auth.mfa.unenroll({ factorId: _mfaEnrollId }).catch(() => {});
+  _mfaEnrollId = null;
+  document.getElementById('mfaEnrollSection').style.display='none';
+  document.getElementById('mfaCode').value='';
+  renderMFAStatus();
+}
+
 // ── TABS ──────────────────────────────────────────────────────────────────────
 const TAB_NAMES=['dag','omzet','week','jaar','historie','instellingen'];
 function switchTab(name){
@@ -531,7 +605,7 @@ function switchTab(name){
   if(name==='week')generateWeek();
   if(name==='jaar')renderJaar();
   if(name==='historie')renderHistory();
-  if(name==='instellingen')renderSettings();
+  if(name==='instellingen'){renderSettings();renderMFAStatus();}
 }
 
 // ── DAG CAT FIELDS ────────────────────────────────────────────────────────────

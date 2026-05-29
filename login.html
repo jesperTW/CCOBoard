@@ -73,6 +73,19 @@ h2{font-size:22px;font-weight:800;color:var(--navy);margin-bottom:6px}
     <button class="btn-primary" id="resetBtn" onclick="handleReset()">Reset-link versturen</button>
     <div class="forgot"><a href="#" onclick="showLogin(event)">Terug naar inloggen</a></div>
   </div>
+
+  <div id="totpForm" style="display:none">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:32px;margin-bottom:8px">🔐</div>
+      <p style="color:var(--muted);font-size:14px;line-height:1.5">Open je authenticator-app en vul de 6-cijferige code in</p>
+    </div>
+    <div class="form-group">
+      <label>Authenticator code</label>
+      <input type="text" id="totpCode" placeholder="000000" maxlength="6" autocomplete="one-time-code" inputmode="numeric" style="font-size:24px;letter-spacing:8px;text-align:center" onkeydown="if(event.key==='Enter')handleTOTP()"/>
+    </div>
+    <button class="btn-primary" id="totpBtn" onclick="handleTOTP()">Bevestigen</button>
+    <div class="forgot"><a href="#" onclick="showLogin(event)">Terug</a></div>
+  </div>
 </div>
 
 <script>
@@ -81,14 +94,23 @@ const SUPABASE_URL = 'https://pbjzojhidgulctxniuix.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBianpvamhpZGd1bGN0eG5pdWl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwMjU1MTgsImV4cCI6MjA5NTYwMTUxOH0.odZB-i7iT5k8nOq_W7-HVDIHryiCRrjuLkOQvRZI83M';
 const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Als er al een sessie is, direct doorsturen
+let _totpFactorId = null;
+
 window.addEventListener('load', async () => {
   const { data: { session } } = await _sb.auth.getSession();
-  if (session) window.location.href = '/';
-
+  if (session) {
+    // Check if MFA is still needed
+    const { data: aal } = await _sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
+      await loadTOTPFactor();
+      showTOTPForm();
+    } else {
+      window.location.href = '/';
+    }
+    return;
+  }
   // Verwerk wachtwoord-reset token in URL
-  const hash = window.location.hash;
-  if (hash.includes('type=recovery')) {
+  if (window.location.hash.includes('type=recovery')) {
     document.getElementById('formTitle').textContent = 'Nieuw wachtwoord instellen';
     document.getElementById('formSub').textContent = 'Kies een nieuw wachtwoord voor je account';
     document.getElementById('passwordGroup').querySelector('label').textContent = 'Nieuw wachtwoord';
@@ -102,9 +124,34 @@ async function handleSubmit() {
   const password = document.getElementById('password').value;
   if (!email || !password) { showError('Vul e-mail en wachtwoord in'); return; }
   setLoading(true);
-  const { error } = await _sb.auth.signInWithPassword({ email, password });
+  const { data, error } = await _sb.auth.signInWithPassword({ email, password });
   setLoading(false);
   if (error) { showError(error.message === 'Invalid login credentials' ? 'Onjuist e-mailadres of wachtwoord' : error.message); return; }
+
+  // Check if MFA (AAL2) is required
+  const { data: aal } = await _sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
+    await loadTOTPFactor();
+    if (_totpFactorId) { showTOTPForm(); return; }
+  }
+  window.location.href = '/';
+}
+
+async function loadTOTPFactor() {
+  const { data } = await _sb.auth.mfa.listFactors();
+  const verified = data?.totp?.find(f => f.status === 'verified');
+  if (verified) _totpFactorId = verified.id;
+}
+
+async function handleTOTP() {
+  const code = document.getElementById('totpCode').value.replace(/\s/g, '');
+  if (code.length !== 6) { showError('Vul een 6-cijferige code in'); return; }
+  const btn = document.getElementById('totpBtn');
+  btn.disabled = true; btn.textContent = 'Controleren...';
+  const { data: challenge, error: cErr } = await _sb.auth.mfa.challenge({ factorId: _totpFactorId });
+  if (cErr) { showError(cErr.message); btn.disabled=false; btn.textContent='Bevestigen'; return; }
+  const { error: vErr } = await _sb.auth.mfa.verify({ factorId: _totpFactorId, challengeId: challenge.id, code });
+  if (vErr) { showError('Ongeldige code — probeer opnieuw'); btn.disabled=false; btn.textContent='Bevestigen'; document.getElementById('totpCode').value=''; return; }
   window.location.href = '/';
 }
 
@@ -129,8 +176,17 @@ async function handlePasswordUpdate() {
   setTimeout(() => window.location.href = '/', 1500);
 }
 
-function showForgot(e) { e.preventDefault(); document.getElementById('loginForm').style.display='none'; document.getElementById('forgotForm').style.display='block'; clearMessages(); }
-function showLogin(e) { e.preventDefault(); document.getElementById('forgotForm').style.display='none'; document.getElementById('loginForm').style.display='block'; clearMessages(); }
+function showTOTPForm() {
+  document.getElementById('loginForm').style.display='none';
+  document.getElementById('forgotForm').style.display='none';
+  document.getElementById('totpForm').style.display='block';
+  document.getElementById('formTitle').textContent='Verificatie';
+  document.getElementById('formSub').textContent='Stap 2 van 2';
+  clearMessages();
+  setTimeout(() => document.getElementById('totpCode').focus(), 100);
+}
+function showForgot(e) { e.preventDefault(); document.getElementById('loginForm').style.display='none'; document.getElementById('totpForm').style.display='none'; document.getElementById('forgotForm').style.display='block'; document.getElementById('formTitle').textContent='Wachtwoord vergeten'; document.getElementById('formSub').textContent='We sturen je een reset-link'; clearMessages(); }
+function showLogin(e) { e.preventDefault(); document.getElementById('forgotForm').style.display='none'; document.getElementById('totpForm').style.display='none'; document.getElementById('loginForm').style.display='block'; document.getElementById('formTitle').textContent='Welkom terug'; document.getElementById('formSub').textContent='Voer je gegevens in om verder te gaan'; clearMessages(); }
 function showError(msg) { const el=document.getElementById('errorMsg'); el.textContent=msg; el.classList.add('show'); document.getElementById('successMsg').classList.remove('show'); }
 function showSuccess(msg) { const el=document.getElementById('successMsg'); el.textContent=msg; el.classList.add('show'); document.getElementById('errorMsg').classList.remove('show'); }
 function clearMessages() { document.getElementById('errorMsg').classList.remove('show'); document.getElementById('successMsg').classList.remove('show'); }
