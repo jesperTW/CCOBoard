@@ -92,7 +92,23 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
 .status-btn.active-aanwezig{background:#dcfce7;border-color:#86efac;color:#166534}
 .status-btn.active-ziek{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
 .status-btn.active-afwezig{background:#f3f4f6;border-color:#d1d5db;color:#374151}
-.team-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+.team-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:8px}
+.team-stat input{padding:6px 5px}
+.funnel{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.funnel-stage{flex:1;min-width:115px;background:var(--gray-bg);border:1px solid var(--border);border-radius:10px;padding:14px 10px;text-align:center;position:relative}
+.funnel-val{font-size:24px;font-weight:800;color:var(--navy)}
+.funnel-lbl{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-top:4px}
+.funnel-conv{font-size:11px;color:var(--blue);font-weight:800;align-self:center;white-space:nowrap}
+.baro{background:var(--gray-bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px}
+.baro-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.baro-name{font-size:14px;font-weight:800;color:var(--navy)}
+.baro-pill{font-size:10.5px;font-weight:800;padding:3px 11px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px}
+.baro-metric{margin-bottom:11px}
+.baro-metric:last-child{margin-bottom:0}
+.baro-lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px}
+.baro-lbl strong{color:var(--navy)}
+.baro-track{background:#e5e7ef;border-radius:20px;height:13px;overflow:hidden}
+.baro-bar{height:100%;border-radius:20px;transition:width .5s ease}
 .team-stat{display:flex;flex-direction:column;gap:4px}
 .team-stat label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
 .team-stat input{border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:13px;font-family:inherit;text-align:right;outline:none;background:var(--white)}
@@ -156,7 +172,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
 .btn-logout{width:100%;background:none;border:1.5px solid rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.55);font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer;font-family:inherit;transition:.15s}
 .btn-logout:hover{background:rgba(255,255,255,.08);color:#fff}
 .sidebar.collapsed .sidebar-user{display:none}
-@media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}.team-stats{grid-template-columns:1fr 1fr}.persoon-totalen{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}.team-stats{grid-template-columns:repeat(3,1fr)}.persoon-totalen{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -172,6 +188,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
   <button class="nav-tab" onclick="switchTab('omzet')" title="Omzet"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9.2A4 4 0 0 0 8.5 12 4 4 0 0 0 15 14.8M7.5 11h5M7.5 13h5"/></svg></span><span class="tab-lbl">Omzet</span></button>
   <button class="nav-tab" onclick="switchTab('week')" title="Weekrapport"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4M4 20h16"/><rect x="7.5" y="12" width="3" height="5"/><rect x="13.5" y="8" width="3" height="9"/></svg></span><span class="tab-lbl">Weekrapport</span></button>
   <button class="nav-tab" onclick="switchTab('jaar')" title="Jaarcijfers"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M9.5 14.5 9 19h6l-.5-4.5M7 21h10"/></svg></span><span class="tab-lbl">Jaarcijfers</span></button>
+  <button class="nav-tab" onclick="switchTab('prestaties')" title="Prestaties & KPI's"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14a6 6 0 0 0-6 6h12a6 6 0 0 0-6-6Z"/><path d="m12 20 3-5"/><path d="M5.5 13.5 4 12M18.5 13.5 20 12M12 7V5"/><circle cx="12" cy="12" r="9"/></svg></span><span class="tab-lbl">Prestaties</span></button>
+  <button class="nav-tab" onclick="switchTab('inzichten')" title="Inzichten"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M8 16l3.5-4 3 2.5L20 7"/></svg></span><span class="tab-lbl">Inzichten</span></button>
   <button class="nav-tab" onclick="switchTab('historie')" title="Historie"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg></span><span class="tab-lbl">Historie</span></button>
   <button class="nav-tab" onclick="switchTab('instellingen')" title="Instellingen"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg></span><span class="tab-lbl">Instellingen</span></button>
   </nav>
@@ -217,6 +235,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
         <div class="form-group"><label>Notities / besproken</label><textarea id="dagNotities" placeholder="Wat is er besproken..."></textarea></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary" onclick="saveDay()">✓ Opslaan</button>
+          <button class="btn btn-outline" id="pdFetchBtn" onclick="fetchFromPipedrive()">⬇ Haal op uit Pipedrive</button>
           <button class="btn btn-outline" id="dagBelangrijkBtn" onclick="toggleDagBelangrijk()">☆ Belangrijk</button>
           <button class="btn btn-outline" onclick="clearDagForm()">Wissen</button>
         </div>
@@ -273,6 +292,51 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
   <div id="jaarPersonen"></div>
 </div>
 
+<!-- ══ PRESTATIES ══ -->
+<div class="panel" id="panel-prestaties">
+  <div class="card">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div class="card-title" style="margin:0"><div class="dot" style="background:var(--blue)"></div>Funnel <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px">— gebeld → afspraak → doorgegaan → deal</span></div>
+      <div class="form-group" style="margin:0"><label>Maand</label><input type="month" id="prestMaand" onchange="renderPrestaties()"/></div>
+    </div>
+    <div id="prestFunnel" style="margin-top:16px"></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="card-title"><div class="dot" style="background:var(--green)"></div>KPI-barometer per teamlid <span id="prestKpiLbl" style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px"></span></div>
+    <div id="prestBarometers"></div>
+  </div>
+</div>
+
+<!-- ══ INZICHTEN ══ -->
+<div class="panel" id="panel-inzichten">
+  <div class="card">
+    <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap">
+      <div class="card-title" style="margin:0"><div class="dot" style="background:var(--blue)"></div>Inzichten <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px">— net als je Pipedrive-inzichten, per persoon</span></div>
+      <div style="flex:1"></div>
+      <div class="form-group" style="margin:0"><label>Persoon</label><select id="inzPersoon" onchange="renderInzichten()" style="border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;background:#fff"></select></div>
+      <div class="form-group" style="margin:0"><label>Jaar</label><select id="inzJaar" onchange="renderInzichten()" style="border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;background:#fff"></select></div>
+    </div>
+  </div>
+  <div class="card" id="inzForecast" style="margin-top:16px"></div>
+  <div class="g4" id="inzPills" style="margin:16px 0"></div>
+  <div class="g2">
+    <div class="card"><div class="card-title"><div class="dot" style="background:var(--green)"></div>Gewonnen deals per maand</div><div class="chart-wrap"><canvas id="inzWonCount"></canvas></div></div>
+    <div class="card"><div class="card-title"><div class="dot" style="background:var(--blue)"></div>Omzet gewonnen deals per maand</div><div class="chart-wrap"><canvas id="inzWonValue"></canvas></div></div>
+  </div>
+  <div class="g2" style="margin-top:16px">
+    <div class="card"><div class="card-title"><div class="dot" style="background:var(--orange)"></div>New business — open deals per maand</div><div class="chart-wrap"><canvas id="inzOpenDeals"></canvas></div></div>
+    <div class="card"><div class="card-title"><div class="dot" style="background:var(--cyan)"></div>Win rate per maand</div><div class="chart-wrap"><canvas id="inzWinRate"></canvas></div></div>
+  </div>
+  <div class="g2" style="margin-top:16px">
+    <div class="card"><div class="card-title"><div class="dot" style="background:var(--blue)"></div>Meetings per week</div><div class="chart-wrap"><canvas id="inzMeetings"></canvas></div></div>
+    <div class="card"><div class="card-title"><div class="dot" style="background:var(--green)"></div>Acquisitie per week <span id="inzAcqLbl" style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px"></span></div><div class="chart-wrap"><canvas id="inzAcq"></canvas></div></div>
+  </div>
+  <div class="g2" style="margin-top:16px">
+    <div class="card"><div class="card-title"><div class="dot" style="background:var(--orange)"></div>Omzet per productcategorie</div><div class="chart-wrap"><canvas id="inzCats"></canvas></div></div>
+    <div class="card"><div class="card-title"><div class="dot" style="background:var(--navy)"></div>Weekrapport</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px">Elke vrijdag om 15:00 gaat automatisch het weekrapport per e-mail naar Jesper &amp; Michiel. Wil je het nu bekijken of versturen? Genereer het via de tab <strong>Weekrapport</strong>.</p><button class="btn btn-outline" onclick="switchTab('week')">📊 Naar weekrapport</button></div>
+  </div>
+</div>
+
 <!-- ══ HISTORIE ══ -->
 <div class="panel" id="panel-historie">
   <div class="card">
@@ -300,6 +364,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
         </div>
       </div>
       <div class="card" style="margin-top:16px">
+        <div class="card-title"><div class="dot" style="background:var(--green)"></div>KPI-doelen</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Doelen voor de barometer op het tabblad <strong>Prestaties</strong>. Gelden voor elk teamlid.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-group"><label>Acquisitie per dag</label><input type="number" id="set-kpi-acqdag" step="1" min="0"/></div>
+          <div class="form-group"><label>Omzet per maand (€)</label><input type="number" id="set-kpi-omzetmaand" step="500" min="0"/></div>
+        </div>
+        <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="saveKpis()">✓ Opslaan</button>
+      </div>
+      <div class="card" style="margin-top:16px">
         <div class="card-title"><div class="dot" style="background:var(--green)"></div>Vorig jaar omzet <span id="prevYearLbl" style="font-weight:400;color:var(--muted);margin-left:4px"></span></div>
         <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Cumulatieve omzet per maand (ex btw). Wordt automatisch vervangen door echte data zodra je in het volgende jaar zit.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px" id="prevYearFields"></div>
@@ -308,7 +381,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
       <div class="card" style="margin-top:16px">
         <div class="card-title"><div class="dot" style="background:var(--green)"></div>Data backup</div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Download een CSV backup of laad eerder opgeslagen data terug in.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn btn-green" onclick="exportCSV()">⬇ Download CSV</button></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn btn-green" onclick="exportCSV()">⬇ Download CSV</button><button class="btn btn-outline" onclick="vulVoorbeeldData(0)">🧪 Voorbeelddata deze maand</button><button class="btn btn-outline" onclick="vulVoorbeeldData(1)">🧪 Voorbeelddata vorige maand</button></div>
         <div class="form-group"><label>CSV importeren</label><input type="file" id="csvImport" accept=".csv" onchange="importCSV(event)" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px"/></div>
       </div>
       <div class="card" style="margin-top:16px">
@@ -356,7 +429,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
 const MAANDEN=['Jan','Feb','Mrt','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'];
 const MAANDEN_LANG=['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
 
-const DEF={bedrijf:'Techniekwerkt',subtitel:'CCO Dashboard',doel:1000000,categories:['Eenmalige plaatsing','Abonnement bestaand','Abonnement nieuw','Jobboost','CPC','Resellers','CV Database','Overig'],members:['Jesper','Luuk','Nicky'],startCats:{},startTeam:{},days:[],prevYearYear:2025,prevYearCumulative:[81753,114074,178017,243474,326325,371000,371000,470000,510000,532000,572000,714000]};
+const DEF={bedrijf:'Techniekwerkt',subtitel:'CCO Dashboard',doel:1000000,categories:['Eenmalige plaatsing','Abonnement bestaand','Abonnement nieuw','Jobboost','CPC','Resellers','CV Database','Overig'],members:['Jesper','Luuk','Nicky'],startCats:{},startTeam:{},days:[],kpis:{acqDag:20,omzetMaand:10000},prevYearYear:2025,prevYearCumulative:[81753,114074,178017,243474,326325,371000,371000,470000,510000,532000,572000,714000]};
 
 // CONFIGURE: Vervang dit met jouw Supabase credentials (zie Instellingen > API in Supabase)
 const SUPABASE_URL = 'https://pbjzojhidgulctxniuix.supabase.co';
@@ -464,6 +537,169 @@ function renderLeaderboard(){
     </div>`).join('');
 }
 
+// ── PRESTATIES & KPI-BAROMETER ──────────────────────────────────────────────
+function prestKleur(pct){return pct>=100?'#16a34a':pct>=60?'#f59e0b':'#ef4444';}
+function prestStatus(pct){return pct>=100?'groen':pct>=60?'oranje':'rood';}
+function renderPrestaties(){
+  const inp=document.getElementById('prestMaand');if(!inp)return;
+  if(!inp.value)inp.value=new Date().toISOString().slice(0,7);
+  const ym=inp.value;
+  const dayList=S.days.filter(d=>(d.datum||'').slice(0,7)===ym);
+
+  // Funnel — team-totalen voor de maand
+  const tG=dayList.reduce((s,d)=>s+(d.gebeld||0),0);
+  const tA=dayList.reduce((s,d)=>s+(d.afspraken||0),0);
+  const tD=dayList.reduce((s,d)=>s+(d.afsprakenDoor||0),0);
+  const tDeals=dayList.reduce((s,d)=>s+(d.deals||0),0);
+  const tO=dayList.reduce((s,d)=>s+dayOmzet(d),0);
+  const conv=(a,b)=>b>0?Math.round(a/b*100)+'%':'–';
+  document.getElementById('prestFunnel').innerHTML=`<div class="funnel">
+    <div class="funnel-stage"><div class="funnel-val">${fmt(tG)}</div><div class="funnel-lbl">📞 Gebeld</div></div>
+    <div class="funnel-conv">${conv(tA,tG)} ▸</div>
+    <div class="funnel-stage"><div class="funnel-val">${fmt(tA)}</div><div class="funnel-lbl">📅 Afspraken</div></div>
+    <div class="funnel-conv">${conv(tD,tA)} ▸</div>
+    <div class="funnel-stage"><div class="funnel-val">${fmt(tD)}</div><div class="funnel-lbl">✅ Doorgegaan</div></div>
+    <div class="funnel-conv">${conv(tDeals,tD)} ▸</div>
+    <div class="funnel-stage"><div class="funnel-val">${fmt(tDeals)}</div><div class="funnel-lbl">🤝 Deals</div></div>
+    <div class="funnel-stage" style="background:var(--blue);border-color:var(--blue)"><div class="funnel-val" style="color:#fff">€${fmt(tO)}</div><div class="funnel-lbl" style="color:rgba(255,255,255,.75)">💶 Omzet</div></div>
+  </div>`;
+
+  // Barometers per teamlid t.o.v. KPI-doelen
+  const acqDoel=S.kpis?.acqDag||20, omzDoel=S.kpis?.omzetMaand||10000;
+  document.getElementById('prestKpiLbl').textContent=`(doel: ${acqDoel} acq./dag · €${fmt(omzDoel)}/maand)`;
+  const wrap=document.getElementById('prestBarometers');
+  if(!S.members.length){wrap.innerHTML='<div class="empty">Geen teamleden.</div>';return;}
+  const baroRow=(lbl,actueel,doel,pct)=>`<div class="baro-metric">
+      <div class="baro-lbl"><span>${lbl}</span><span><strong>${actueel}</strong> / ${doel} · ${Math.round(pct)}%</span></div>
+      <div class="baro-track"><div class="baro-bar" style="width:${Math.min(pct,100)}%;background:${prestKleur(pct)}"></div></div>
+    </div>`;
+  wrap.innerHTML=S.members.map(m=>{
+    const mk=memberKey(m);
+    const presentDagen=dayList.filter(d=>(d.team?.[mk]?.status||'aanwezig')==='aanwezig').length;
+    const acqSom=dayList.reduce((s,d)=>s+(d.team?.[mk]?.gebeld||0),0);
+    const acqGem=presentDagen?acqSom/presentDagen:0;
+    const omz=dayList.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0);
+    const acqPct=acqDoel>0?acqGem/acqDoel*100:0;
+    const omzPct=omzDoel>0?omz/omzDoel*100:0;
+    const overall=Math.min(acqPct,omzPct);
+    const pillBg=overall>=100?'#dcfce7':overall>=60?'#fef3c7':'#fee2e2';
+    const pillTx=overall>=100?'#166534':overall>=60?'#92400e':'#991b1b';
+    const pillTxt=overall>=100?'● Op koers':overall>=60?'● Bijna':'● Actie nodig';
+    return `<div class="baro">
+      <div class="baro-head"><span class="baro-name">👤 ${m}</span><span class="baro-pill" style="background:${pillBg};color:${pillTx}">${pillTxt}</span></div>
+      ${baroRow('Acquisitie / dag (gem.)',acqGem.toFixed(1).replace('.',','),acqDoel,acqPct)}
+      ${baroRow('Omzet deze maand','€'+fmt(omz),'€'+fmt(omzDoel),omzPct)}
+    </div>`;
+  }).join('');
+}
+
+// ── INZICHTEN ─────────────────────────────────────────────────────────────────
+let inzCharts=[];
+const INZ_KLEUREN=['#3b6af5','#16a34a','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899','#0ea5e9'];
+function inzDestroy(){inzCharts.forEach(c=>{try{c.destroy();}catch(e){}});inzCharts=[];}
+function inzMakeChart(id,cfg){const el=document.getElementById(id);if(!el)return;const c=new Chart(el,cfg);inzCharts.push(c);}
+const INZ_FONT={family:'DM Sans',size:12};
+function inzAxes(euro){return {x:{grid:{display:false},ticks:{font:{family:'DM Sans',size:11},color:'#6b7280'}},y:{grid:{color:'rgba(0,0,0,.05)'},beginAtZero:true,ticks:{font:{family:'DM Sans',size:11},color:'#6b7280',callback:v=>euro?'€'+fmt(v):fmt(v)}}};}
+function renderInzichten(){
+  const selP=document.getElementById('inzPersoon');if(!selP)return;
+  // selects vullen (selectie behouden)
+  const pPrev=selP.value||'__all__';
+  selP.innerHTML='<option value="__all__">Heel team</option>'+S.members.map(m=>`<option value="${memberKey(m)}">${m}</option>`).join('');
+  selP.value=[...selP.options].some(o=>o.value===pPrev)?pPrev:'__all__';
+  const selY=document.getElementById('inzJaar');
+  const jaren=[...new Set(S.days.map(d=>(d.datum||'').slice(0,4)).filter(Boolean))];
+  if(!jaren.includes(String(curYear())))jaren.push(String(curYear()));
+  jaren.sort((a,b)=>b.localeCompare(a));
+  const yPrev=selY.value||String(curYear());
+  selY.innerHTML=jaren.map(y=>`<option value="${y}">${y}</option>`).join('');
+  selY.value=jaren.includes(yPrev)?yPrev:jaren[0];
+
+  const persoon=selP.value, jaar=selY.value;
+  const scope=persoon==='__all__'?S.members.map(memberKey):[persoon];
+  const sumDay=(d,f)=>scope.reduce((s,mk)=>s+(d.team?.[mk]?.[f]||0),0);
+  const dagen=S.days.filter(d=>(d.datum||'').slice(0,4)===jaar).sort((a,b)=>a.datum.localeCompare(b.datum));
+
+  inzDestroy();
+
+  // ── Maand-aggregaties ──
+  const mWon=Array(12).fill(0),mVal=Array(12).fill(0),mLost=Array(12).fill(0),mOpenSnap=Array(12).fill(null);
+  dagen.forEach(d=>{const mo=parseInt(d.datum.slice(5,7))-1;mWon[mo]+=sumDay(d,'deals');mVal[mo]+=sumDay(d,'omzet');mLost[mo]+=sumDay(d,'verloren');mOpenSnap[mo]=sumDay(d,'openDeals');});
+  const mWinRate=mWon.map((w,i)=>{const tot=w+mLost[i];return tot>0?Math.round(w/tot*100):null;});
+
+  // ── Week-aggregaties (per maandag) ──
+  const wkKeys=[],wkMeet={},wkAcq={};
+  dagen.forEach(d=>{const mon=getMonday(d.datum).toISOString().slice(0,10);if(!wkKeys.includes(mon))wkKeys.push(mon);
+    wkMeet[mon]=(wkMeet[mon]||0)+sumDay(d,'afspraken');
+    if(!wkAcq[mon])wkAcq[mon]={};scope.forEach(mk=>wkAcq[mon][mk]=(wkAcq[mon][mk]||0)+(d.team?.[mk]?.gebeld||0));});
+  wkKeys.sort();
+  const wkLbl=wkKeys.map(k=>{const dt=new Date(k);return dt.getDate()+'/'+(dt.getMonth()+1);});
+
+  // ── Stat-pills (jaar + scope) ──
+  const totWon=mWon.reduce((a,b)=>a+b,0),totLost=mLost.reduce((a,b)=>a+b,0),totVal=mVal.reduce((a,b)=>a+b,0);
+  const winRate=(totWon+totLost)>0?Math.round(totWon/(totWon+totLost)*100):0;
+  const gemDeal=totWon>0?totVal/totWon:0;
+  const laatsteOpen=dagen.length?sumDay(dagen[dagen.length-1],'openDeals'):0;
+  document.getElementById('inzPills').innerHTML=`
+    <div class="stat-pill"><div class="pill-icon green">🏆</div><div><div class="pill-val">${totWon}</div><div class="pill-lbl">Gewonnen deals (${jaar})</div></div></div>
+    <div class="stat-pill"><div class="pill-icon cyan">🎯</div><div><div class="pill-val">${winRate}%</div><div class="pill-lbl">Win rate</div></div></div>
+    <div class="stat-pill"><div class="pill-icon blue">💶</div><div><div class="pill-val">€${fmt(gemDeal)}</div><div class="pill-lbl">Gem. dealwaarde</div></div></div>
+    <div class="stat-pill"><div class="pill-icon orange">📂</div><div><div class="pill-val">${laatsteOpen}</div><div class="pill-lbl">Open deals (laatst)</div></div></div>`;
+
+  // ── Forecast & pipeline-dekking ──
+  const fcMo=(jaar===String(curYear()))?new Date().getMonth():11;
+  const laatsteDag=dagen.length?dagen[dagen.length-1]:null;
+  const openWaarde=laatsteDag?sumDay(laatsteDag,'openWaarde'):0;
+  const gewonnenMaand=mVal[fcMo]||0;
+  const maandDoel=(S.kpis?.omzetMaand||10000)*scope.length;
+  const gewogen=openWaarde*winRate/100;
+  const verwacht=gewonnenMaand+gewogen;
+  const restDoel=Math.max(0,maandDoel-gewonnenMaand);
+  const coverage=restDoel>0?openWaarde/restDoel:(openWaarde>0?99:0);
+  const pacing=maandDoel>0?verwacht/maandDoel*100:0;
+  const fcKleur=pacing>=100?'#16a34a':pacing>=80?'#f59e0b':'#ef4444';
+  const fcBadge=pacing>=100?{t:'● Op koers',bg:'#dcfce7',c:'#166534'}:pacing>=80?{t:'● Krap',bg:'#fef3c7',c:'#92400e'}:{t:'● Gat',bg:'#fee2e2',c:'#991b1b'};
+  const covKleur=coverage>=3?'#16a34a':coverage>=1.5?'#f59e0b':'#ef4444';
+  const gat=maandDoel-verwacht;
+  const fcCell=(lbl,val,sub)=>`<div style="flex:1;min-width:130px"><div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:3px">${lbl}</div><div style="font-size:21px;font-weight:800;color:var(--navy);line-height:1.1">${val}</div>${sub?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${sub}</div>`:''}</div>`;
+  document.getElementById('inzForecast').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <div class="card-title" style="margin:0"><div class="dot" style="background:var(--navy)"></div>Forecast & pipeline-dekking <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px">— ${MAANDEN_LANG[fcMo]} ${jaar}${persoon==='__all__'?' · heel team':''}</span></div>
+      <span class="baro-pill" style="background:${fcBadge.bg};color:${fcBadge.c}">${fcBadge.t}</span>
+    </div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px">
+      ${fcCell('Maanddoel','€'+fmt(maandDoel),scope.length+' pers. × €'+fmt(S.kpis?.omzetMaand||10000))}
+      ${fcCell('Gewonnen deze maand','€'+fmt(gewonnenMaand))}
+      ${fcCell('Open pipeline','€'+fmt(openWaarde),laatsteOpen+' open deals')}
+      ${fcCell('Gewogen pipeline','€'+fmt(gewogen),'× win rate '+winRate+'%')}
+      ${fcCell('Verwacht maandeinde','<span style="color:'+fcKleur+'">€'+fmt(verwacht)+'</span>',gat>0?'gat van €'+fmt(gat):'€'+fmt(-gat)+' boven doel')}
+    </div>
+    <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px;color:var(--muted)"><span>Forecast vs. maanddoel</span><span><strong style="color:${fcKleur}">${Math.round(pacing)}%</strong></span></div>
+    <div class="baro-track"><div class="baro-bar" style="width:${Math.min(pacing,100)}%;background:${fcKleur}"></div></div>
+    <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:13px;color:var(--muted)">Pipeline-dekking op resterend doel:</span>
+      <span style="font-size:18px;font-weight:800;color:${covKleur}">${coverage>=99?'∞':coverage.toFixed(1).replace('.',',')}×</span>
+      <span style="font-size:12px;color:var(--muted)">(streef ≥ 3× — genoeg pipeline om het doel te halen)</span>
+    </div>`;
+
+  // ── Grafieken ──
+  inzMakeChart('inzWonCount',{type:'bar',data:{labels:MAANDEN,datasets:[{label:'Gewonnen deals',data:mWon,backgroundColor:'#16a34a',borderRadius:5,maxBarThickness:34}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:inzAxes(false)}});
+  inzMakeChart('inzWonValue',{type:'bar',data:{labels:MAANDEN,datasets:[{label:'Omzet',data:mVal,backgroundColor:'#3b6af5',borderRadius:5,maxBarThickness:34}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' €'+fmt(c.parsed.y)}}},scales:inzAxes(true)}});
+  inzMakeChart('inzOpenDeals',{type:'bar',data:{labels:MAANDEN,datasets:[{label:'Open deals',data:mOpenSnap.map(v=>v==null?0:v),backgroundColor:'#f59e0b',borderRadius:5,maxBarThickness:34}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:inzAxes(false)}});
+  inzMakeChart('inzWinRate',{type:'line',data:{labels:MAANDEN,datasets:[{label:'Win rate',data:mWinRate,borderColor:'#06b6d4',backgroundColor:'rgba(6,182,212,.12)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#06b6d4',fill:true,tension:.35,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+(c.parsed.y==null?'–':c.parsed.y+'%')}}},scales:{x:{grid:{display:false},ticks:{font:INZ_FONT,color:'#6b7280'}},y:{grid:{color:'rgba(0,0,0,.05)'},beginAtZero:true,max:100,ticks:{font:{family:'DM Sans',size:11},color:'#6b7280',callback:v=>v+'%'}}}}});
+  inzMakeChart('inzMeetings',{type:'bar',data:{labels:wkLbl,datasets:[{label:'Meetings',data:wkKeys.map(k=>wkMeet[k]||0),backgroundColor:'#3b6af5',borderRadius:5,maxBarThickness:30}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:inzAxes(false)}});
+
+  // Acquisitie per week — per persoon gestapelde balken bij 'Heel team'
+  const acqMembers=persoon==='__all__'?S.members:[S.members.find(m=>memberKey(m)===persoon)].filter(Boolean);
+  const acqDatasets=acqMembers.map((m,i)=>{const mk=memberKey(m);return{label:m,data:wkKeys.map(k=>wkAcq[k]?.[mk]||0),backgroundColor:INZ_KLEUREN[i%INZ_KLEUREN.length],borderRadius:4,maxBarThickness:30};});
+  document.getElementById('inzAcqLbl').textContent=persoon==='__all__'?'(per teamlid)':'';
+  inzMakeChart('inzAcq',{type:'bar',data:{labels:wkLbl,datasets:acqDatasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:acqMembers.length>1,labels:{font:INZ_FONT,color:'#6b7280',boxWidth:12,usePointStyle:true}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:INZ_FONT,color:'#6b7280'}},y:{stacked:true,grid:{color:'rgba(0,0,0,.05)'},beginAtZero:true,ticks:{font:{family:'DM Sans',size:11},color:'#6b7280'}}}}});
+
+  // Omzet per categorie (team-niveau; cats wordt niet per persoon bijgehouden)
+  const catTot={};dagen.forEach(d=>{Object.entries(d.cats||{}).forEach(([k,v])=>{catTot[k]=(catTot[k]||0)+(v||0);});});
+  const catNames=S.categories.filter(c=>(catTot[catKey(c)]||0)>0);
+  inzMakeChart('inzCats',{type:'doughnut',data:{labels:catNames.length?catNames:['Geen omzet'],datasets:[{data:catNames.length?catNames.map(c=>catTot[catKey(c)]||0):[1],backgroundColor:catNames.length?catNames.map((_,i)=>INZ_KLEUREN[i%INZ_KLEUREN.length]):['#e5e7eb'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:INZ_FONT,color:'#6b7280',boxWidth:12,usePointStyle:true}},tooltip:{callbacks:{label:c=>' '+c.label+': €'+fmt(c.parsed)}}}}});
+}
+
 function updateHeader(){
   document.getElementById('logoIcon').textContent=(S.bedrijf||'T').charAt(0).toUpperCase();
   document.getElementById('headerTitle').textContent=S.subtitel||'CCO Dashboard';
@@ -542,6 +778,8 @@ window.addEventListener('load', async () => {
   if (!Array.isArray(S.days)) S.days = [];
   if (!S.startCats) S.startCats = {};
   if (!S.startTeam) S.startTeam = {};
+  if (!S.kpis) S.kpis = { ...DEF.kpis };
+  else { if (S.kpis.acqDag == null) S.kpis.acqDag = DEF.kpis.acqDag; if (S.kpis.omzetMaand == null) S.kpis.omzetMaand = DEF.kpis.omzetMaand; }
   // Migratie: vul ontbrekende velden aan vanuit DEF
   if (!S.prevYearCumulative || !S.prevYearCumulative.some(v=>v>0)) {
     S.prevYearCumulative = DEF.prevYearCumulative;
@@ -623,7 +861,7 @@ function cancelMFA() {
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
-const TAB_NAMES=['dag','omzet','week','jaar','historie','instellingen'];
+const TAB_NAMES=['dag','omzet','week','jaar','prestaties','inzichten','historie','instellingen'];
 function switchTab(name){
   document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',TAB_NAMES[i]===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -632,6 +870,8 @@ function switchTab(name){
   if(name==='omzet'){updateMeter();renderOmzetCatRows();}
   if(name==='week')generateWeek();
   if(name==='jaar')renderJaar();
+  if(name==='prestaties')renderPrestaties();
+  if(name==='inzichten')renderInzichten();
   if(name==='historie')renderHistory();
   if(name==='instellingen'){renderSettings();renderStartTeam();renderPrevYearFields();renderMFAStatus();}
 }
@@ -659,6 +899,8 @@ function renderTeamGrid(){
       <div class="team-stats" id="tstats-${mk}">
         <div class="team-stat"><label>Gebeld</label><input type="number" id="t-${mk}-gebeld" placeholder="0" min="0" step="1" oninput="recalcDayTotals()"/></div>
         <div class="team-stat"><label>Afspraken</label><input type="number" id="t-${mk}-afspraken" placeholder="0" min="0" step="1" oninput="recalcDayTotals()"/></div>
+        <div class="team-stat"><label>Doorgegaan</label><input type="number" id="t-${mk}-afsprakendoor" placeholder="0" min="0" step="1" oninput="recalcDayTotals()"/></div>
+        <div class="team-stat"><label>Deals</label><input type="number" id="t-${mk}-deals" placeholder="0" min="0" step="1" oninput="recalcDayTotals()"/></div>
         <div class="team-stat"><label>Omzet €</label><input type="number" id="t-${mk}-omzet" placeholder="0" step="1" min="0" oninput="recalcDayTotals()"/></div>
       </div>`;
     grid.appendChild(div);
@@ -704,9 +946,10 @@ function saveDay(){
   if(!datum){toast('❌ Vul een datum in');return;}
   const cats={};
   S.categories.forEach(c=>{const k=catKey(c);cats[k]=intVal('dagcat-'+k);});
-  const team={};let gebeld=0,afspraken=0;
-  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('t-'+mk+'-gebeld'),aa=intVal('t-'+mk+'-afspraken'),oo=intVal('t-'+mk+'-omzet');team[mk]={gebeld:gg,afspraken:aa,omzet:oo,status:memberStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;});
-  const day={datum,gebeld,afspraken,notities:document.getElementById('dagNotities').value.trim(),belangrijk:dagBelangrijkState,cats,team};
+  const prevDay=S.days.find(d=>d.datum===datum);
+  const team={};let gebeld=0,afspraken=0,afsprakenDoor=0,deals=0;
+  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('t-'+mk+'-gebeld'),aa=intVal('t-'+mk+'-afspraken'),ad=intVal('t-'+mk+'-afsprakendoor'),dl=intVal('t-'+mk+'-deals'),oo=intVal('t-'+mk+'-omzet');const pt=prevDay?.team?.[mk]||{},pf=pdPrefill[mk]||{};team[mk]={gebeld:gg,afspraken:aa,afsprakenDoor:ad,deals:dl,omzet:oo,verloren:pf.verloren??pt.verloren??0,openDeals:pf.openDeals??pt.openDeals??0,openWaarde:pf.openWaarde??pt.openWaarde??0,status:memberStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;afsprakenDoor+=ad;deals+=dl;});
+  const day={datum,gebeld,afspraken,afsprakenDoor,deals,notities:document.getElementById('dagNotities').value.trim(),belangrijk:dagBelangrijkState,cats,team};
   const idx=S.days.findIndex(d=>d.datum===datum);
   if(idx>=0)S.days[idx]=day;else S.days.push(day);
   S.days.sort((a,b)=>a.datum.localeCompare(b.datum));
@@ -718,19 +961,74 @@ function clearDagForm(){
   document.getElementById('dagDatum').value=today();
   document.getElementById('dagNotities').value='';
   S.categories.forEach(c=>{const e=document.getElementById('dagcat-'+catKey(c));if(e)e.value='';});
-  S.members.forEach(m=>{const mk=memberKey(m);['gebeld','afspraken','omzet'].forEach(f=>{const e=document.getElementById('t-'+mk+'-'+f);if(e)e.value='';});setStatus(mk,'aanwezig');});
+  S.members.forEach(m=>{const mk=memberKey(m);['gebeld','afspraken','afsprakendoor','deals','omzet'].forEach(f=>{const e=document.getElementById('t-'+mk+'-'+f);if(e)e.value='';});setStatus(mk,'aanwezig');});
+  pdPrefill={};
   setDagBelangrijk(false);
   recalcDayTotals();
 }
 
+// ── PIPEDRIVE: dag voorinvullen ────────────────────────────────────────────────
+// pdPrefill houdt de velden vast die NIET in het formulier staan (verloren, open
+// pipeline) tussen 'ophalen' en 'opslaan', zodat saveDay ze meeneemt.
+let pdPrefill={};
+function pdNorm(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+async function fetchFromPipedrive(){
+  const datum=document.getElementById('dagDatum').value||today();
+  document.getElementById('dagDatum').value=datum;
+  const btn=document.getElementById('pdFetchBtn');
+  const orig=btn.textContent;btn.disabled=true;btn.textContent='⏳ Ophalen…';
+  try{
+    const {data:{session}}=await _sb.auth.getSession();
+    if(!session){window.location.href='/login.html';return;}
+    const r=await fetch('/api/pipedrive-day?date='+encodeURIComponent(datum),{headers:{Authorization:'Bearer '+session.access_token}});
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
+
+    pdPrefill={};
+    // Teamleden matchen op naam (Pipedrive-volnaam bevat voornaam-lid)
+    let matchedMembers=0;
+    S.members.forEach(m=>{
+      const mk=memberKey(m),mn=m.toLowerCase();
+      const hit=(j.perUser||[]).find(u=>{const un=u.name.toLowerCase();return un.split(/\s+/)[0]===mn||un.includes(mn);});
+      const g=document.getElementById('t-'+mk+'-gebeld'),a=document.getElementById('t-'+mk+'-afspraken'),ad=document.getElementById('t-'+mk+'-afsprakendoor'),dl=document.getElementById('t-'+mk+'-deals'),o=document.getElementById('t-'+mk+'-omzet');
+      if(hit){matchedMembers++;
+        if(g)g.value=hit.gebeld||'';
+        if(a)a.value=hit.afspraken||'';
+        if(ad)ad.value=hit.afsprakenDoor||'';
+        if(dl)dl.value=hit.deals||'';
+        if(o)o.value=Math.round(hit.omzet)||'';
+        pdPrefill[mk]={verloren:hit.verloren||0,openDeals:hit.openDeals||0,openWaarde:Math.round(hit.openWaarde||0)};
+      }
+    });
+
+    // Categorie-omzet matchen: backend leidt categorie af uit de deal-titel
+    // en stuurt nette categorienamen (default 'Overig').
+    const pc=j.perCategory||{};
+    S.categories.forEach(c=>{
+      const k=catKey(c),el=document.getElementById('dagcat-'+k);if(!el)return;
+      let val=0;
+      Object.entries(pc).forEach(([cat,v])=>{if(pdNorm(cat)===pdNorm(c))val+=v;});
+      if(val)el.value=Math.round(val);
+    });
+
+    recalcDayTotals();
+    toast(`⬇ Uit Pipedrive geladen (${matchedMembers}/${S.members.length} teamleden) — controleer en sla op`);
+  }catch(err){
+    toast('❌ Pipedrive: '+err.message);
+  }finally{
+    btn.disabled=false;btn.textContent=orig;
+  }
+}
+
 function loadDay(datum){
   const d=S.days.find(x=>x.datum===datum);if(!d)return;
+  pdPrefill={};
   switchTab('dag');
   document.getElementById('dagDatum').value=d.datum;
   document.getElementById('dagNotities').value=d.notities||'';
   setDagBelangrijk(d.belangrijk);
   S.categories.forEach(c=>{const k=catKey(c);const e=document.getElementById('dagcat-'+k);if(e)e.value=d.cats?.[k]||'';});
-  S.members.forEach(m=>{const mk=memberKey(m);const tm=d.team?.[mk];['gebeld','afspraken','omzet'].forEach(f=>{const e=document.getElementById('t-'+mk+'-'+f);if(e)e.value=tm?.[f]||'';});setStatus(mk,tm?.status||'aanwezig');});
+  S.members.forEach(m=>{const mk=memberKey(m);const tm=d.team?.[mk];[['gebeld','gebeld'],['afspraken','afspraken'],['afsprakendoor','afsprakenDoor'],['deals','deals'],['omzet','omzet']].forEach(([id,key])=>{const e=document.getElementById('t-'+mk+'-'+id);if(e)e.value=tm?.[key]||'';});setStatus(mk,tm?.status||'aanwezig');});
   recalcDayTotals();
   toast('✏️ Dag geladen — pas aan en sla opnieuw op');
 }
@@ -881,6 +1179,8 @@ function histItemHTML(d){
         <div class="hist-row">
           <span class="hist-stat">📞 <strong>${d.gebeld||0}</strong> gebeld</span>
           <span class="hist-stat">📅 <strong>${d.afspraken||0}</strong> afspraken</span>
+          <span class="hist-stat">✅ <strong>${d.afsprakenDoor||0}</strong> door</span>
+          <span class="hist-stat">🤝 <strong>${d.deals||0}</strong> deals</span>
           <span class="hist-stat">💶 <strong>€${fmt(dagO)}</strong></span>
           <span class="hist-stat" style="color:var(--muted)">${statusIcons}</span>
         </div>
@@ -908,6 +1208,8 @@ function histEditorHTML(d){
       <div class="team-stats">
         <div class="team-stat"><label>Gebeld</label><input type="number" id="h-t-${mk}-gebeld" value="${tm.gebeld||''}" min="0" step="1" placeholder="0"/></div>
         <div class="team-stat"><label>Afspraken</label><input type="number" id="h-t-${mk}-afspraken" value="${tm.afspraken||''}" min="0" step="1" placeholder="0"/></div>
+        <div class="team-stat"><label>Doorgegaan</label><input type="number" id="h-t-${mk}-afsprakendoor" value="${tm.afsprakenDoor||''}" min="0" step="1" placeholder="0"/></div>
+        <div class="team-stat"><label>Deals</label><input type="number" id="h-t-${mk}-deals" value="${tm.deals||''}" min="0" step="1" placeholder="0"/></div>
         <div class="team-stat"><label>Omzet €</label><input type="number" id="h-t-${mk}-omzet" value="${tm.omzet||''}" min="0" step="1" placeholder="0"/></div>
       </div>
     </div>`;
@@ -955,9 +1257,9 @@ function hToggleBelangrijk(){
 function saveHistDay(datum){
   const idx=S.days.findIndex(d=>d.datum===datum);if(idx<0)return;
   const cats={};S.categories.forEach(c=>{const k=catKey(c);cats[k]=intVal('h-dagcat-'+k);});
-  const team={};let gebeld=0,afspraken=0;
-  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('h-t-'+mk+'-gebeld'),aa=intVal('h-t-'+mk+'-afspraken'),oo=intVal('h-t-'+mk+'-omzet');team[mk]={gebeld:gg,afspraken:aa,omzet:oo,status:hStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;});
-  S.days[idx]={datum,gebeld,afspraken,notities:(document.getElementById('h-notities')?.value||'').trim(),belangrijk:hBelangrijkState,cats,team};
+  const team={};let gebeld=0,afspraken=0,afsprakenDoor=0,deals=0;
+  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('h-t-'+mk+'-gebeld'),aa=intVal('h-t-'+mk+'-afspraken'),ad=intVal('h-t-'+mk+'-afsprakendoor'),dl=intVal('h-t-'+mk+'-deals'),oo=intVal('h-t-'+mk+'-omzet');team[mk]={gebeld:gg,afspraken:aa,afsprakenDoor:ad,deals:dl,omzet:oo,status:hStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;afsprakenDoor+=ad;deals+=dl;});
+  S.days[idx]={datum,gebeld,afspraken,afsprakenDoor,deals,notities:(document.getElementById('h-notities')?.value||'').trim(),belangrijk:hBelangrijkState,cats,team};
   persist();updateMeter();buildChart();renderOmzetCatRows();renderKPIs();renderLeaderboard();renderHistory();
   toast('✓ Dag bijgewerkt');
 }
@@ -973,12 +1275,12 @@ function histShowAll(){histOnlyImportant=false;histExpanded=null;const hj=docume
 // ── CSV ───────────────────────────────────────────────────────────────────────
 function exportCSV(){
   const catHeaders=S.categories.map(c=>`cat_${catKey(c)}`);
-  const memberHeaders=S.members.flatMap(m=>[`${memberKey(m)}_gebeld`,`${memberKey(m)}_afspraken`,`${memberKey(m)}_omzet`,`${memberKey(m)}_status`]);
+  const memberHeaders=S.members.flatMap(m=>[`${memberKey(m)}_gebeld`,`${memberKey(m)}_afspraken`,`${memberKey(m)}_afsprakendoor`,`${memberKey(m)}_deals`,`${memberKey(m)}_omzet`,`${memberKey(m)}_status`]);
   const headers=['datum','gebeld','afspraken','notities',...catHeaders,...memberHeaders,'belangrijk'];
   const rows=S.days.map(d=>{
     const base=[d.datum,d.gebeld||0,d.afspraken||0,`"${(d.notities||'').replace(/"/g,'""')}"`];
     const cats=S.categories.map(c=>d.cats?.[catKey(c)]||0);
-    const members=S.members.flatMap(m=>{const mk=memberKey(m);return[d.team?.[mk]?.gebeld||0,d.team?.[mk]?.afspraken||0,d.team?.[mk]?.omzet||0,d.team?.[mk]?.status||'aanwezig'];});
+    const members=S.members.flatMap(m=>{const mk=memberKey(m);return[d.team?.[mk]?.gebeld||0,d.team?.[mk]?.afspraken||0,d.team?.[mk]?.afsprakenDoor||0,d.team?.[mk]?.deals||0,d.team?.[mk]?.omzet||0,d.team?.[mk]?.status||'aanwezig'];});
     return[...base,...cats,...members,d.belangrijk?1:0].join(',');
   });
   const startStr=S.categories.map(c=>`startcat_${catKey(c)}=${S.startCats[catKey(c)]||0}`).join(',');
@@ -1010,9 +1312,9 @@ function importCSV(event){
       S.days=lines.filter(l=>!l.startsWith('#')&&!l.startsWith('datum')).map(line=>{
         const cols=line.split(',');const datum=cols[0];if(!datum||datum.length!==10)return null;
         const cats={};catKeys.forEach((k,i)=>{cats[k]=parseInt(cols[4+i])||0;});
-        const team={};memberKeys.forEach((mk,i)=>{const base=4+catKeys.length+(i*4);team[mk]={gebeld:parseInt(cols[base])||0,afspraken:parseInt(cols[base+1])||0,omzet:parseInt(cols[base+2])||0,status:cols[base+3]||'aanwezig'};});
-        const belIdx=4+catKeys.length+memberKeys.length*4;
-        return{datum,gebeld:parseInt(cols[1])||0,afspraken:parseInt(cols[2])||0,notities:(cols[3]||'').replace(/^"|"$/g,'').replace(/""/g,'"'),belangrijk:cols[belIdx]==='1',cats,team};
+        const team={};let adSum=0,dlSum=0;memberKeys.forEach((mk,i)=>{const base=4+catKeys.length+(i*6);const ad=parseInt(cols[base+2])||0,dl=parseInt(cols[base+3])||0;team[mk]={gebeld:parseInt(cols[base])||0,afspraken:parseInt(cols[base+1])||0,afsprakenDoor:ad,deals:dl,omzet:parseInt(cols[base+4])||0,status:cols[base+5]||'aanwezig'};adSum+=ad;dlSum+=dl;});
+        const belIdx=4+catKeys.length+memberKeys.length*6;
+        return{datum,gebeld:parseInt(cols[1])||0,afspraken:parseInt(cols[2])||0,afsprakenDoor:adSum,deals:dlSum,notities:(cols[3]||'').replace(/^"|"$/g,'').replace(/""/g,'"'),belangrijk:cols[belIdx]==='1',cats,team};
       }).filter(Boolean);
       S.days.sort((a,b)=>a.datum.localeCompare(b.datum));
       persist();updateHeader();updateMeter();renderDagCatFields();renderTeamGrid();renderSettings();renderHistory();renderKPIs();renderLeaderboard();renderOmzetCatRows();buildChart();
@@ -1028,12 +1330,53 @@ function renderSettings(){
   document.getElementById('set-bedrijf').value=S.bedrijf||'';
   document.getElementById('set-subtitel').value=S.subtitel||'';
   document.getElementById('set-doel').value=S.doel||1000000;
+  const ka=document.getElementById('set-kpi-acqdag');if(ka)ka.value=S.kpis?.acqDag??20;
+  const ko=document.getElementById('set-kpi-omzetmaand');if(ko)ko.value=S.kpis?.omzetMaand??10000;
   const mw=document.getElementById('memberSettings');mw.innerHTML='';
   S.members.forEach((m,i)=>{const row=document.createElement('div');row.className='set-row';row.innerHTML=`<input type="text" value="${m}" id="mem-${i}"/><button class="btn btn-danger btn-sm" onclick="removeMember(${i})">✕</button>`;mw.appendChild(row);});
   const cw=document.getElementById('catSettings');cw.innerHTML='';
   S.categories.forEach((c,i)=>{const row=document.createElement('div');row.className='set-row';row.innerHTML=`<input type="text" value="${c}" id="cat-${i}"/><button class="btn btn-danger btn-sm" onclick="removeCat(${i})">✕</button>`;cw.appendChild(row);});
 }
 function saveBedrijf(){S.bedrijf=document.getElementById('set-bedrijf').value.trim()||'Techniekwerkt';S.subtitel=document.getElementById('set-subtitel').value.trim()||'CCO Dashboard';S.doel=parseInt(document.getElementById('set-doel').value)||1000000;persist();updateHeader();updateMeter();buildChart();toast('✓ Opgeslagen');}
+function saveKpis(){S.kpis=S.kpis||{};S.kpis.acqDag=Math.max(0,parseInt(document.getElementById('set-kpi-acqdag').value)||0);S.kpis.omzetMaand=Math.max(0,parseInt(document.getElementById('set-kpi-omzetmaand').value)||0);persist();renderPrestaties();toast('✓ KPI-doelen opgeslagen');}
+function vulVoorbeeldData(offset){
+  offset=offset||0;
+  const base=new Date();base.setDate(1);base.setMonth(base.getMonth()-offset);
+  const y=base.getFullYear(),mo=base.getMonth();
+  const ym=`${y}-${String(mo+1).padStart(2,'0')}`;
+  const maandNaam=base.toLocaleDateString('nl-NL',{month:'long',year:'numeric'});
+  if(!confirm(`Voorbeelddata invullen voor ${maandNaam}?\nBestaande dagen worden niet overschreven. Je kunt ze later via Historie verwijderen.`))return;
+  const now=new Date();
+  const lastDay=(y===now.getFullYear()&&mo===now.getMonth())?now.getDate():new Date(y,mo+1,0).getDate();
+  let added=0;
+  for(let day=1;day<=lastDay;day++){
+    const dt=new Date(y,mo,day),dow=dt.getDay();
+    if(dow===0||dow===6)continue;
+    const datum=`${ym}-${String(day).padStart(2,'0')}`;
+    if(S.days.some(d=>d.datum===datum))continue;
+    const team={},cats={};let gebeld=0,afspraken=0,afsprakenDoor=0,deals=0;
+    S.members.forEach(m=>{
+      const mk=memberKey(m);
+      const g=12+Math.floor(Math.random()*18);
+      const a=Math.floor(Math.random()*6);
+      const ad=Math.max(0,a-(Math.random()<0.5?1:0));
+      const dl=ad>0&&Math.random()<0.16?1:0;
+      const omzet=dl>0?1800+Math.floor(Math.random()*3500):0;
+      const verloren=Math.random()<0.1?1:0;
+      const openDeals=1+Math.floor(Math.random()*4);
+      const openWaarde=openDeals*(2000+Math.floor(Math.random()*3000));
+      team[mk]={gebeld:g,afspraken:a,afsprakenDoor:ad,deals:dl,omzet,verloren,openDeals,openWaarde,status:'aanwezig'};
+      gebeld+=g;afspraken+=a;afsprakenDoor+=ad;deals+=dl;
+      if(omzet>0){const k=catKey(S.categories[Math.floor(Math.random()*S.categories.length)]);cats[k]=(cats[k]||0)+omzet;}
+    });
+    S.days.push({datum,gebeld,afspraken,afsprakenDoor,deals,notities:'',belangrijk:false,cats,team});
+    added++;
+  }
+  S.days.sort((a,b)=>a.datum.localeCompare(b.datum));
+  const pm=document.getElementById('prestMaand');if(pm)pm.value=ym;
+  persist();updateMeter();buildChart();renderOmzetCatRows();renderKPIs();renderLeaderboard();renderHistory();renderPrestaties();
+  toast(added?`✓ ${added} voorbeelddagen toegevoegd (${maandNaam})`:`Alle werkdagen in ${maandNaam} bestaan al`);
+}
 function saveTeam(){const n=S.members.map((_,i)=>document.getElementById('mem-'+i)?.value.trim()).filter(Boolean);S.members=n.length?n:S.members;persist();renderTeamGrid();renderSettings();toast('✓ Team opgeslagen');}
 function addMember(){S.members.push('Nieuw teamlid');renderSettings();}
 function removeMember(i){if(S.members.length<=1){toast('Minimaal 1 teamlid');return;}S.members.splice(i,1);renderSettings();}
