@@ -38,14 +38,23 @@ module.exports = async function handler(req, res) {
     const meetKey = actTypes[MEETING_TYPE_NAME.toLowerCase()] || 'meeting';
 
     // ── Activiteiten (gebeld + afspraken) per gebruiker ───────────────────────
+    // We halen ALLE activiteiten van die dag op (zowel ingepland als afgerond),
+    // en splitsen op betekenis:
+    //   gebeld          = afgeronde Acquisitie-activiteiten (call is gevoerd)
+    //   afspraken       = INGEPLANDE Meetings (geboekt voor die dag, ongeacht of ze al geweest zijn)
+    //   afsprakenDoor   = AFGERONDE Meetings (meeting heeft daadwerkelijk plaatsgevonden)
     const activities = await fetchAllActivities(date);
     const perUser = {}; // user_id -> {gebeld, afspraken, afsprakenDoor, deals, omzet, verloren, openDeals, openWaarde}
     const ensure = (uid) => (perUser[uid] = perUser[uid] || { gebeld: 0, afspraken: 0, afsprakenDoor: 0, deals: 0, omzet: 0, verloren: 0, openDeals: 0, openWaarde: 0 });
     for (const a of activities) {
       const t = a.type;
+      const done = a.done === true || a.done === 1;
       const u = ensure(a.user_id);
-      if (acqKey && t === acqKey) u.gebeld += 1;
-      else if (t === meetKey) u.afspraken += 1;
+      if (acqKey && t === acqKey) { if (done) u.gebeld += 1; }
+      else if (t === meetKey) {
+        u.afspraken += 1;               // ingepland
+        if (done) u.afsprakenDoor += 1; // meeting gehad
+      }
     }
 
     // ── Gewonnen deals (aantal + omzet per gebruiker, en per categorie) ───────
@@ -72,10 +81,6 @@ module.exports = async function handler(req, res) {
       const ownerId = dealOwner(d);
       if (ownerId != null) { const u = ensure(ownerId); u.openDeals += 1; u.openWaarde += Number(d.value) || 0; }
     }
-
-    // afsprakenDoor: Pipedrive kent geen standaard 'no-show'-vlag, dus nemen we
-    // aan dat alle afspraken doorgingen. Bij je controle verlaag je dit per no-show.
-    Object.values(perUser).forEach(u => { u.afsprakenDoor = u.afspraken; });
 
     // user_id -> naam, in array voor de frontend (die mapt op teamleden op naam)
     const perUserNamed = Object.entries(perUser).map(([uid, v]) => ({
@@ -142,8 +147,10 @@ async function fetchAllActivities(date) {
   const out = [];
   let start = 0;
   for (let i = 0; i < 20; i++) {
+    // Geen done-filter: we willen zowel ingeplande als afgeronde activiteiten
+    // (afspraken = ingepland, afsprakenDoor/gebeld = afgerond). Filteren op a.done in de loop.
     const json = await pd('/activities', {
-      user_id: 0, done: 1, start_date: date, end_date: date, limit: 500, start
+      user_id: 0, start_date: date, end_date: date, limit: 500, start
     });
     (json.data || []).forEach(a => out.push(a));
     const pg = json.additional_data?.pagination;
