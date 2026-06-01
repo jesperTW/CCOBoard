@@ -481,6 +481,10 @@ function dayOmzet(d){return d&&d.cats?Object.values(d.cats).reduce((a,b)=>a+(b||
 function dayTeamOmzet(d){return d&&d.team?Object.values(d.team).reduce((a,t)=>a+(t.omzet||0),0):0;}
 function startSum(){return Object.values(S.startCats).reduce((a,b)=>a+(b||0),0);}
 function catDaySum(k,y){return daysIn(y||curYear()).reduce((s,d)=>s+(d.cats?.[k]||0),0);}
+// Een losse-omzet-dag bevat alleen categorie-omzet (lege team). Een echte
+// dagregistratie heeft altijd alle teamleden in team (saveDay vult ze allemaal).
+// Zulke dagen tellen wél mee in omzet, maar NIET als registratie/aanwezigheid.
+function isLooseOnlyDay(d){return !d.team||Object.keys(d.team).length===0;}
 function catTotal(k){return (S.startCats[k]||0)+catDaySum(k);}
 function totalOmzet(){return startSum()+daysIn(curYear()).reduce((s,d)=>s+dayOmzet(d),0);}
 // New Business vs Bestaand. New Business = categorieën in S.newBizCats
@@ -642,7 +646,7 @@ function renderPrestaties(){
     </div>`;
   wrap.innerHTML=S.members.map(m=>{
     const mk=memberKey(m);
-    const presentDagen=dayList.filter(d=>(d.team?.[mk]?.status||'aanwezig')==='aanwezig').length;
+    const presentDagen=dayList.filter(d=>d.team?.[mk]&&(d.team[mk].status||'aanwezig')==='aanwezig').length;
     const acqSom=dayList.reduce((s,d)=>s+(d.team?.[mk]?.gebeld||0),0);
     const acqGem=presentDagen?acqSom/presentDagen:0;
     const omz=dayList.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0);
@@ -1133,7 +1137,7 @@ function generateWeek(){
   const sv=document.getElementById('weekStart').value;if(!sv)return;
   const start=new Date(sv);
   const days=[];
-  for(let i=0;i<5;i++){const d=new Date(start);d.setDate(d.getDate()+i);const key=d.toISOString().split('T')[0];days.push({date:d,key,d:S.days.find(x=>x.datum===key)});}
+  for(let i=0;i<5;i++){const d=new Date(start);d.setDate(d.getDate()+i);const key=d.toISOString().split('T')[0];const found=S.days.find(x=>x.datum===key);days.push({date:d,key,d:found&&!isLooseOnlyDay(found)?found:undefined});}
   const tG=days.reduce((s,x)=>s+(x.d?.gebeld||0),0),tA=days.reduce((s,x)=>s+(x.d?.afspraken||0),0),tO=days.reduce((s,x)=>s+dayOmzet(x.d),0);
   const memberCols=S.members.map(m=>`<th>${m}</th>`).join('');
   const rows=days.map(({date,d})=>{
@@ -1270,11 +1274,12 @@ let histExpanded=null,histOnlyImportant=false,hBelangrijkState=false;const hStat
 
 function renderHistory(){
   const list=document.getElementById('histList');
-  document.getElementById('histCount').textContent=`(${S.days.length})`;
+  const regDays=S.days.filter(d=>!isLooseOnlyDay(d));
+  document.getElementById('histCount').textContent=`(${regDays.length})`;
   const fb=document.getElementById('histFilterBtn');
   if(fb)fb.style.cssText=histOnlyImportant?'background:#fef3c7;color:#92400e;border:1.5px solid #fde68a':'';
-  if(!S.days.length){list.innerHTML='<div class="empty">Nog geen registraties.</div>';return;}
-  let days=[...S.days].reverse();
+  if(!regDays.length){list.innerHTML='<div class="empty">Nog geen registraties.</div>';return;}
+  let days=[...regDays].reverse();
   if(histOnlyImportant)days=days.filter(d=>d.belangrijk);
   if(!days.length){list.innerHTML='<div class="empty">Geen dagen als belangrijk gemarkeerd.</div>';return;}
   list.innerHTML=days.map(d=>histItemHTML(d)).join('');
