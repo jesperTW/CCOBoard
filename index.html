@@ -483,14 +483,18 @@ function startSum(){return Object.values(S.startCats).reduce((a,b)=>a+(b||0),0);
 function catDaySum(k,y){return daysIn(y||curYear()).reduce((s,d)=>s+(d.cats?.[k]||0),0);}
 // Een losse-omzet-dag bevat alleen categorie-omzet (lege team). Een echte
 // dagregistratie heeft altijd alle teamleden in team (saveDay vult ze allemaal).
-// Zulke dagen tellen wél mee in omzet, maar NIET als registratie/aanwezigheid.
 function isLooseOnlyDay(d){return !d.team||Object.keys(d.team).length===0;}
-function catTotal(k){return (S.startCats[k]||0)+catDaySum(k);}
-function totalOmzet(){return startSum()+daysIn(curYear()).reduce((s,d)=>s+dayOmzet(d),0);}
+// Losse omzet leeft volledig apart in S.looseOmzet (NOOIT in day.cats), zodat het
+// niet botst met de dagregistratie. Hier tellen we het mee in de omzet.
+function looseCatSum(k,y){const yy=String(y||curYear());return (S.looseOmzet||[]).filter(e=>String(e.catKey)===k&&(e.datum||'').slice(0,4)===yy).reduce((s,e)=>s+(e.bedrag||0),0);}
+function looseSum(y){const yy=String(y||curYear());return (S.looseOmzet||[]).filter(e=>(e.datum||'').slice(0,4)===yy).reduce((s,e)=>s+(e.bedrag||0),0);}
+function looseMonthSum(ym){return (S.looseOmzet||[]).filter(e=>(e.datum||'').slice(0,7)===ym).reduce((s,e)=>s+(e.bedrag||0),0);}
+function catTotal(k){return (S.startCats[k]||0)+catDaySum(k)+looseCatSum(k);}
+function totalOmzet(){return startSum()+daysIn(curYear()).reduce((s,d)=>s+dayOmzet(d),0)+looseSum();}
 // New Business vs Bestaand. New Business = categorieën in S.newBizCats
 // (default: Eenmalige plaatsing, Jobboost, Abonnement nieuw). Rest = Bestaand.
 function isNewBiz(k){return (S.newBizCats||[]).includes(k);}
-function catYearTotal(k,jaar){const y=String(jaar||curYear());const base=(y===String(curYear()))?(S.startCats[k]||0):0;return base+catDaySum(k,y);}
+function catYearTotal(k,jaar){const y=String(jaar||curYear());const base=(y===String(curYear()))?(S.startCats[k]||0):0;return base+catDaySum(k,y)+looseCatSum(k,y);}
 function omzetMix(jaar){let nb=0,best=0;S.categories.forEach(c=>{const k=catKey(c),t=catYearTotal(k,jaar);if(isNewBiz(k))nb+=t;else best+=t;});return{nb,best,tot:nb+best};}
 
 // ── METER ─────────────────────────────────────────────────────────────────────
@@ -510,18 +514,18 @@ function renderOmzetCatRows(){
   const wrap=document.getElementById('omzetCatRows');if(!wrap)return;wrap.innerHTML='';
   const yl=document.getElementById('omzetYear');if(yl)yl.textContent='('+curYear()+')';
   S.categories.forEach(cat=>{
-    const k=catKey(cat),base=S.startCats[k]||0,daysum=catDaySum(k),tot=base+daysum;
+    const k=catKey(cat),base=S.startCats[k]||0,extra=catDaySum(k)+looseCatSum(k),tot=base+extra;
     const row=document.createElement('div');row.className='cat-row';
     row.innerHTML=`<div class="cat-row-name">${cat}</div>
       <div style="display:flex;align-items:center;gap:16px">
         <div style="text-align:right"><div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.3px;margin-bottom:2px">HANDMATIG €</div><input type="number" id="omzetcat-${k}" value="${base||''}" placeholder="0" step="1" min="0" oninput="previewOmzetTotals()"/></div>
-        <div style="text-align:right;min-width:110px"><div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.3px;margin-bottom:2px">TOTAAL</div><div style="font-size:18px;font-weight:800;color:var(--navy)" id="omzettot-${k}">€${fmt(tot)}</div><div style="font-size:10px;color:var(--muted)" id="omzetsub-${k}">+ €${fmt(daysum)} uit dagen</div></div>
+        <div style="text-align:right;min-width:110px"><div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.3px;margin-bottom:2px">TOTAAL</div><div style="font-size:18px;font-weight:800;color:var(--navy)" id="omzettot-${k}">€${fmt(tot)}</div><div style="font-size:10px;color:var(--muted)" id="omzetsub-${k}">+ €${fmt(extra)} uit dagen/los</div></div>
       </div>`;
     wrap.appendChild(row);
   });
 }
 function previewOmzetTotals(){
-  S.categories.forEach(cat=>{const k=catKey(cat);const base=intVal('omzetcat-'+k);const daysum=catDaySum(k);const t=document.getElementById('omzettot-'+k);if(t)t.textContent='€'+fmt(base+daysum);});
+  S.categories.forEach(cat=>{const k=catKey(cat);const base=intVal('omzetcat-'+k);const extra=catDaySum(k)+looseCatSum(k);const t=document.getElementById('omzettot-'+k);if(t)t.textContent='€'+fmt(base+extra);});
 }
 function saveStartCats(){
   S.categories.forEach(c=>{const k=catKey(c);S.startCats[k]=intVal('omzetcat-'+k);});
@@ -544,12 +548,6 @@ function renderLooseOmzet(){
       <div style="display:flex;align-items:center;gap:12px"><span style="font-size:12px;color:var(--muted)">${fmtDatum(e.datum)}</span><button title="Verwijderen" onclick="removeLooseOmzet('${e.id}')" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1">×</button></div>
     </div>`).join('');
 }
-function ensureDay(datum){
-  let d=S.days.find(x=>x.datum===datum);
-  if(!d){d={datum,gebeld:0,afspraken:0,afsprakenDoor:0,deals:0,notities:'',belangrijk:false,cats:{},team:{}};S.days.push(d);S.days.sort((a,b)=>a.datum.localeCompare(b.datum));}
-  if(!d.cats)d.cats={};
-  return d;
-}
 function addLooseOmzet(){
   const datum=document.getElementById('looseDatum').value||today();
   const cat=document.getElementById('looseCat').value;
@@ -557,20 +555,17 @@ function addLooseOmzet(){
   if(!cat){toast('❌ Kies een categorie');return;}
   if(!bedrag||bedrag<=0){toast('❌ Vul een bedrag in');return;}
   const k=catKey(cat);
-  const d=ensureDay(datum);
-  d.cats[k]=(d.cats[k]||0)+bedrag;
+  // Losse omzet wordt APART bewaard (niet in day.cats), zodat het niet botst met
+  // de dagregistratie maar wél meetelt in de omzet-totalen (zie looseSum/looseCatSum).
   S.looseOmzet.push({id:'lo'+Date.now()+Math.floor(Math.random()*1000),datum,cat,catKey:k,bedrag});
   document.getElementById('looseBedrag').value='';
-  persist();updateMeter();buildChart();renderOmzetCatRows();renderLooseOmzet();renderKPIs();renderLeaderboard();renderHistory();
+  persist();updateMeter();buildChart();renderOmzetCatRows();renderLooseOmzet();renderKPIs();renderLeaderboard();
   toast(`✓ €${fmt(bedrag)} losse omzet (${cat}) op ${fmtDatum(datum)}`);
 }
 function removeLooseOmzet(id){
   const i=(S.looseOmzet||[]).findIndex(e=>e.id===id);if(i<0)return;
-  const e=S.looseOmzet[i];
-  const d=S.days.find(x=>x.datum===e.datum);
-  if(d&&d.cats&&d.cats[e.catKey]!=null){d.cats[e.catKey]=Math.max(0,(d.cats[e.catKey]||0)-(e.bedrag||0));}
   S.looseOmzet.splice(i,1);
-  persist();updateMeter();buildChart();renderOmzetCatRows();renderLooseOmzet();renderKPIs();renderLeaderboard();renderHistory();
+  persist();updateMeter();buildChart();renderOmzetCatRows();renderLooseOmzet();renderKPIs();renderLeaderboard();
   toast('✓ Losse omzet verwijderd');
 }
 
@@ -770,6 +765,7 @@ function renderInzichten(){
   // persoon hangt). Identiek aan de Omzet-tab: handmatige basis (startCats) +
   // dag-omzet (day.cats). De handmatige basis hoort bij het lopende jaar.
   const catTot={};dagen.forEach(d=>{Object.entries(d.cats||{}).forEach(([k,v])=>{catTot[k]=(catTot[k]||0)+(v||0);});});
+  S.categories.forEach(c=>{const k=catKey(c);const ls=looseCatSum(k,jaar);if(ls)catTot[k]=(catTot[k]||0)+ls;});
   if(jaar===String(curYear())){S.categories.forEach(c=>{const k=catKey(c);if(S.startCats[k])catTot[k]=(catTot[k]||0)+S.startCats[k];});}
   const grandTot=Object.values(catTot).reduce((a,b)=>a+(b||0),0);
   const catNames=grandTot>0?S.categories.slice():[];
@@ -797,6 +793,7 @@ function buildChart(){
   const doel=S.doel||1000000,jaar=curYear(),prev=jaar-1;
   const perCur={};
   S.days.forEach(d=>{const yr=d.datum.slice(0,4),mo=d.datum.slice(0,7);if(yr==String(jaar))perCur[mo]=(perCur[mo]||0)+dayOmzet(d);});
+  (S.looseOmzet||[]).forEach(e=>{const mo=(e.datum||'').slice(0,7);if((e.datum||'').slice(0,4)==String(jaar))perCur[mo]=(perCur[mo]||0)+(e.bedrag||0);});
   const labels=[],curPoints=[],prevPoints=[],goalPoints=[];
   let cumul=startSum();
   for(let m=0;m<12;m++){
@@ -868,6 +865,17 @@ window.addEventListener('load', async () => {
   if (!S.prevYearCumulative || !S.prevYearCumulative.some(v=>v>0)) {
     S.prevYearCumulative = DEF.prevYearCumulative;
     S.prevYearYear = DEF.prevYearYear;
+    await persist();
+  }
+  // Migratie: oude losse omzet stond in day.cats; haal het eruit (telt nu apart
+  // mee via looseSum) en ruim lege losse-only dagen op. Eenmalig.
+  if (!S._looseMigrated) {
+    (S.looseOmzet || []).forEach(e => {
+      const d = S.days.find(x => x.datum === e.datum);
+      if (d && d.cats && d.cats[e.catKey] != null) d.cats[e.catKey] = Math.max(0, (d.cats[e.catKey] || 0) - (e.bedrag || 0));
+    });
+    S.days = S.days.filter(d => !(isLooseOnlyDay(d) && Object.values(d.cats || {}).every(v => !v)));
+    S._looseMigrated = true;
     await persist();
   }
 
