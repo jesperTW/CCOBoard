@@ -37,24 +37,22 @@ module.exports = async function handler(req, res) {
     const acqKey = actTypes[ACQ_TYPE_NAME.toLowerCase()];
     const meetKey = actTypes[MEETING_TYPE_NAME.toLowerCase()] || 'meeting';
 
-    // ── Activiteiten (gebeld + afspraken) per gebruiker ───────────────────────
-    // We halen ALLE activiteiten van die dag op (zowel ingepland als afgerond),
-    // en splitsen op betekenis:
-    //   gebeld          = afgeronde Acquisitie-activiteiten (call is gevoerd)
-    //   afspraken       = INGEPLANDE Meetings (geboekt voor die dag, ongeacht of ze al geweest zijn)
-    //   afsprakenDoor   = AFGERONDE Meetings (meeting heeft daadwerkelijk plaatsgevonden)
-    const activities = await fetchAllActivities(date);
+    // ── Activiteiten per gebruiker ────────────────────────────────────────────
+    // 'gebeld' en 'afsprakenDoor' tellen op AFROND-datum (marked_as_done_time =
+    // die dag), net als de Pipedrive Acquisitie-grafiek. Pipedrive's datumfilter
+    // werkt op due_date, niet op afrond-datum, dus we halen een ruim venster
+    // afgeronde activiteiten op en filteren in code op afrond-datum.
+    //   gebeld        = Acquisitie-calls die die dag zijn afgerond
+    //   afsprakenDoor = Meetings die die dag zijn afgerond (meeting gehad)
+    // 'afspraken' (ingepland) wordt NIET meer berekend — die voert de gebruiker handmatig in.
+    const activities = await fetchDoneActivitiesCompletedOn(date);
     const perUser = {}; // user_id -> {gebeld, afspraken, afsprakenDoor, deals, omzet, verloren, openDeals, openWaarde}
     const ensure = (uid) => (perUser[uid] = perUser[uid] || { gebeld: 0, afspraken: 0, afsprakenDoor: 0, deals: 0, omzet: 0, verloren: 0, openDeals: 0, openWaarde: 0 });
     for (const a of activities) {
       const t = a.type;
-      const done = a.done === true || a.done === 1;
       const u = ensure(a.user_id);
-      if (acqKey && t === acqKey) { if (done) u.gebeld += 1; }
-      else if (t === meetKey) {
-        u.afspraken += 1;               // ingepland
-        if (done) u.afsprakenDoor += 1; // meeting gehad
-      }
+      if (acqKey && t === acqKey) u.gebeld += 1;
+      else if (t === meetKey) u.afsprakenDoor += 1;
     }
 
     // ── Gewonnen deals (aantal + omzet per gebruiker, en per categorie) ───────
@@ -143,21 +141,21 @@ function categoryFromTitle(title) {
   return 'Overig';
 }
 
-async function fetchAllActivities(date) {
-  // LET OP: Pipedrive behandelt end_date als EXCLUSIEF. start_date=end_date geeft
-  // dus 0 resultaten. We zetten end_date op de dag erná om precies één dag te krijgen.
-  const endExclusive = nextDay(date);
+async function fetchDoneActivitiesCompletedOn(date) {
+  // Pipedrive's start_date/end_date filteren op due_date, niet op afrond-datum.
+  // Een call kan eerder gepland zijn maar vandaag afgerond. We halen daarom een
+  // ruim due-venster afgeronde activiteiten op (90 dagen terug t/m 7 dagen vooruit)
+  // en houden alleen wat op `date` is afgerond (marked_as_done_time).
+  const startWin = addDays(date, -90);
+  const endWin = addDays(date, 8); // exclusief, dus t/m +7
   const out = [];
   let start = 0;
-  for (let i = 0; i < 20; i++) {
-    // Geen done-filter: we willen zowel ingeplande als afgeronde activiteiten
-    // (afspraken = ingepland, afsprakenDoor/gebeld = afgerond). Filteren op a.done in de loop.
+  for (let i = 0; i < 60; i++) {
     const json = await pd('/activities', {
-      user_id: 0, start_date: date, end_date: endExclusive, limit: 500, start
+      user_id: 0, done: 1, start_date: startWin, end_date: endWin, limit: 500, start
     });
     (json.data || []).forEach(a => {
-      // dubbele zekerheid: alleen activiteiten met due_date == gevraagde dag
-      if (!a.due_date || a.due_date === date) out.push(a);
+      if ((a.marked_as_done_time || '').slice(0, 10) === date) out.push(a);
     });
     const pg = json.additional_data?.pagination;
     if (!pg?.more_items_in_collection) break;
@@ -166,9 +164,10 @@ async function fetchAllActivities(date) {
   return out;
 }
 
-function nextDay(date) {
+function nextDay(date) { return addDays(date, 1); }
+function addDays(date, n) {
   const d = new Date(date + 'T00:00:00Z');
-  d.setUTCDate(d.getUTCDate() + 1);
+  d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }
 
