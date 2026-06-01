@@ -46,8 +46,8 @@ module.exports = async function handler(req, res) {
     //   afsprakenDoor = Meetings die die dag zijn afgerond (meeting gehad)
     // 'afspraken' (ingepland) wordt NIET meer berekend — die voert de gebruiker handmatig in.
     const activities = await fetchDoneActivitiesCompletedOn(date);
-    const perUser = {}; // user_id -> {gebeld, afspraken, afsprakenDoor, deals, omzet, verloren, openDeals, openWaarde}
-    const ensure = (uid) => (perUser[uid] = perUser[uid] || { gebeld: 0, afspraken: 0, afsprakenDoor: 0, deals: 0, omzet: 0, verloren: 0, openDeals: 0, openWaarde: 0 });
+    const perUser = {}; // user_id -> {gebeld, afspraken, afsprakenDoor, deals, omzet, verloren, openDeals, openWaarde, catOmzet}
+    const ensure = (uid) => (perUser[uid] = perUser[uid] || { gebeld: 0, afspraken: 0, afsprakenDoor: 0, deals: 0, omzet: 0, verloren: 0, openDeals: 0, openWaarde: 0, catOmzet: {} });
     for (const a of activities) {
       const t = a.type;
       const u = ensure(a.user_id);
@@ -63,9 +63,12 @@ module.exports = async function handler(req, res) {
     for (const d of wonDeals) {
       const val = Number(d.value) || 0;
       const ownerId = dealOwner(d);
-      if (ownerId != null) { const u = ensure(ownerId); u.omzet += val; u.deals += 1; }
-
       const cat = categoryFromTitle(d.title);
+      if (ownerId != null) {
+        const u = ensure(ownerId);
+        u.omzet += val; u.deals += 1;
+        u.catOmzet[cat] = (u.catOmzet[cat] || 0) + val; // omzet per categorie per persoon (voor New Business per persoon)
+      }
       perCategory[cat] = (perCategory[cat] || 0) + val;
     }
 

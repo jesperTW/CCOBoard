@@ -1028,7 +1028,7 @@ function saveDay(){
   S.categories.forEach(c=>{const k=catKey(c);cats[k]=intVal('dagcat-'+k);});
   const prevDay=S.days.find(d=>d.datum===datum);
   const team={};let gebeld=0,afspraken=0,afsprakenDoor=0,deals=0;
-  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('t-'+mk+'-gebeld'),aa=intVal('t-'+mk+'-afspraken'),ad=intVal('t-'+mk+'-afsprakendoor'),dl=intVal('t-'+mk+'-deals'),oo=intVal('t-'+mk+'-omzet');const pt=prevDay?.team?.[mk]||{},pf=pdPrefill[mk]||{};team[mk]={gebeld:gg,afspraken:aa,afsprakenDoor:ad,deals:dl,omzet:oo,verloren:pf.verloren??pt.verloren??0,openDeals:pf.openDeals??pt.openDeals??0,openWaarde:pf.openWaarde??pt.openWaarde??0,status:memberStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;afsprakenDoor+=ad;deals+=dl;});
+  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('t-'+mk+'-gebeld'),aa=intVal('t-'+mk+'-afspraken'),ad=intVal('t-'+mk+'-afsprakendoor'),dl=intVal('t-'+mk+'-deals'),oo=intVal('t-'+mk+'-omzet');const pt=prevDay?.team?.[mk]||{},pf=pdPrefill[mk]||{};team[mk]={gebeld:gg,afspraken:aa,afsprakenDoor:ad,deals:dl,omzet:oo,verloren:pf.verloren??pt.verloren??0,openDeals:pf.openDeals??pt.openDeals??0,openWaarde:pf.openWaarde??pt.openWaarde??0,newBizOmzet:pf.newBizOmzet??pt.newBizOmzet??0,status:memberStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;afsprakenDoor+=ad;deals+=dl;});
   const day={datum,gebeld,afspraken,afsprakenDoor,deals,notities:document.getElementById('dagNotities').value.trim(),belangrijk:dagBelangrijkState,cats,team};
   const idx=S.days.findIndex(d=>d.datum===datum);
   if(idx>=0)S.days[idx]=day;else S.days.push(day);
@@ -1077,7 +1077,9 @@ async function fetchFromPipedrive(){
         if(ad)ad.value=hit.afsprakenDoor||'';
         if(dl)dl.value=hit.deals||'';
         if(o)o.value=Math.round(hit.omzet)||'';
-        pdPrefill[mk]={verloren:hit.verloren||0,openDeals:hit.openDeals||0,openWaarde:Math.round(hit.openWaarde||0)};
+        // New Business-omzet per persoon: som van de categorie-omzet in new-biz categorieën
+        let nb=0;Object.entries(hit.catOmzet||{}).forEach(([cn,v])=>{if(isNewBiz(catKey(cn)))nb+=v||0;});
+        pdPrefill[mk]={verloren:hit.verloren||0,openDeals:hit.openDeals||0,openWaarde:Math.round(hit.openWaarde||0),newBizOmzet:Math.round(nb)};
       }
     });
 
@@ -1206,6 +1208,7 @@ function renderJaar(){
     const totG=yd.reduce((s,d)=>s+(d.team?.[mk]?.gebeld||0),0);
     const totA=yd.reduce((s,d)=>s+(d.team?.[mk]?.afspraken||0),0);
     const totO=(S.startTeam?.[mk]||0)+yd.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0);
+    const totNB=yd.reduce((s,d)=>s+(d.team?.[mk]?.newBizOmzet||0),0);
     const dagMet=yd.filter(d=>d.team?.[mk]);
     const aanw=dagMet.filter(d=>!d.team[mk].status||d.team[mk].status==='aanwezig').length;
     const ziek=dagMet.filter(d=>d.team[mk].status==='ziek').length;
@@ -1240,6 +1243,7 @@ function renderJaar(){
         <div class="persoon-stat"><div class="persoon-stat-val">${fmt(totG)}</div><div class="persoon-stat-lbl">Gebeld</div></div>
         <div class="persoon-stat"><div class="persoon-stat-val">${fmt(totA)}</div><div class="persoon-stat-lbl">Afspraken gemaakt</div></div>
         <div class="persoon-stat"><div class="persoon-stat-val">€${fmt(totO)}</div><div class="persoon-stat-lbl">Omzet</div></div>
+        <div class="persoon-stat"><div class="persoon-stat-val" style="color:#16a34a">€${fmt(totNB)}</div><div class="persoon-stat-lbl">w.v. New Business</div></div>
         <div class="persoon-stat"><div class="persoon-stat-val">${aanw}d / ${ziek}z / ${afwez}a</div><div class="persoon-stat-lbl">Aanw. / Ziek / Afwez.</div></div>
       </div>
       <div class="persoon-aanw">
@@ -1473,9 +1477,11 @@ function vulVoorbeeldData(offset){
       const verloren=Math.random()<0.1?1:0;
       const openDeals=1+Math.floor(Math.random()*4);
       const openWaarde=openDeals*(2000+Math.floor(Math.random()*3000));
-      team[mk]={gebeld:g,afspraken:a,afsprakenDoor:ad,deals:dl,omzet,verloren,openDeals,openWaarde,status:'aanwezig'};
+      const dealCatKey=omzet>0?catKey(S.categories[Math.floor(Math.random()*S.categories.length)]):null;
+      const newBizOmzet=dealCatKey&&isNewBiz(dealCatKey)?omzet:0;
+      team[mk]={gebeld:g,afspraken:a,afsprakenDoor:ad,deals:dl,omzet,verloren,openDeals,openWaarde,newBizOmzet,status:'aanwezig'};
       gebeld+=g;afspraken+=a;afsprakenDoor+=ad;deals+=dl;
-      if(omzet>0){const k=catKey(S.categories[Math.floor(Math.random()*S.categories.length)]);cats[k]=(cats[k]||0)+omzet;}
+      if(omzet>0&&dealCatKey){cats[dealCatKey]=(cats[dealCatKey]||0)+omzet;}
     });
     S.days.push({datum,gebeld,afspraken,afsprakenDoor,deals,notities:'',belangrijk:false,cats,team});
     added++;
