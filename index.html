@@ -753,8 +753,10 @@ function renderInzichten(){
 
   // Omzet per categorie (team-niveau; cats wordt niet per persoon bijgehouden,
   // dus dit is altijd team-breed en bevat ook losse omzet die niet aan een
-  // persoon hangt). We tonen ALLE categorieën zodra er ergens omzet is.
+  // persoon hangt). Identiek aan de Omzet-tab: handmatige basis (startCats) +
+  // dag-omzet (day.cats). De handmatige basis hoort bij het lopende jaar.
   const catTot={};dagen.forEach(d=>{Object.entries(d.cats||{}).forEach(([k,v])=>{catTot[k]=(catTot[k]||0)+(v||0);});});
+  if(jaar===String(curYear())){S.categories.forEach(c=>{const k=catKey(c);if(S.startCats[k])catTot[k]=(catTot[k]||0)+S.startCats[k];});}
   const grandTot=Object.values(catTot).reduce((a,b)=>a+(b||0),0);
   const catNames=grandTot>0?S.categories.slice():[];
   inzMakeChart('inzCats',{type:'doughnut',data:{labels:catNames.length?catNames:['Geen omzet'],datasets:[{data:catNames.length?catNames.map(c=>catTot[catKey(c)]||0):[1],backgroundColor:catNames.length?catNames.map((_,i)=>INZ_KLEUREN[i%INZ_KLEUREN.length]):['#e5e7eb'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:INZ_FONT,color:'#6b7280',boxWidth:12,usePointStyle:true}},tooltip:{callbacks:{label:c=>' '+c.label+': €'+fmt(c.parsed)}}}}});
