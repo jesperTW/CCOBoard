@@ -1208,7 +1208,8 @@ function renderJaar(){
     const totG=yd.reduce((s,d)=>s+(d.team?.[mk]?.gebeld||0),0);
     const totA=yd.reduce((s,d)=>s+(d.team?.[mk]?.afspraken||0),0);
     const totO=(S.startTeam?.[mk]||0)+yd.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0);
-    const totNB=yd.reduce((s,d)=>s+(d.team?.[mk]?.newBizOmzet||0),0);
+    // De openingsstand per persoon (startTeam) telt mee als New Business.
+    const totNB=(S.startTeam?.[mk]||0)+yd.reduce((s,d)=>s+(d.team?.[mk]?.newBizOmzet||0),0);
     const dagMet=yd.filter(d=>d.team?.[mk]);
     const aanw=dagMet.filter(d=>!d.team[mk].status||d.team[mk].status==='aanwezig').length;
     const ziek=dagMet.filter(d=>d.team[mk].status==='ziek').length;
