@@ -290,6 +290,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
 <!-- ══ JAAR ══ -->
 <div class="panel" id="panel-jaar">
   <div class="g4" id="jaarPills" style="margin-bottom:16px"></div>
+  <div class="card" id="jaarMixCard" style="margin-bottom:16px">
+    <div class="card-title"><div class="dot" style="background:var(--green)"></div>Omzet-mix — New Business vs Bestaand <span id="jaarMixYear" style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px"></span></div>
+    <div id="jaarMix"></div>
+  </div>
   <div class="g2">
     <div class="card">
       <div class="card-title"><div class="dot" style="background:var(--orange)"></div>Conversie & KPI's <span id="kpiYear" style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px"></span></div>
@@ -344,8 +348,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
   </div>
   <div class="g2" style="margin-top:16px">
     <div class="card"><div class="card-title"><div class="dot" style="background:var(--orange)"></div>Omzet per productcategorie</div><div class="chart-wrap"><canvas id="inzCats"></canvas></div></div>
-    <div class="card"><div class="card-title"><div class="dot" style="background:var(--navy)"></div>Weekrapport</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px">Elke vrijdag om 15:00 gaat automatisch het weekrapport per e-mail naar Jesper &amp; Michiel. Wil je het nu bekijken of versturen? Genereer het via de tab <strong>Weekrapport</strong>.</p><button class="btn btn-outline" onclick="switchTab('week')">📊 Naar weekrapport</button></div>
+    <div class="card"><div class="card-title"><div class="dot" style="background:var(--green)"></div>New Business vs Bestaand</div><div id="inzMixLbl" style="font-size:12px;color:var(--muted);margin:-6px 0 8px"></div><div class="chart-wrap"><canvas id="inzNewBiz"></canvas></div></div>
   </div>
+  <div class="card" style="margin-top:16px"><div class="card-title"><div class="dot" style="background:var(--navy)"></div>Weekrapport</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px">Elke vrijdag om 15:00 gaat automatisch het weekrapport per e-mail naar Jesper &amp; Michiel. Wil je het nu bekijken of versturen? Genereer het via de tab <strong>Weekrapport</strong>.</p><button class="btn btn-outline" onclick="switchTab('week')">📊 Naar weekrapport</button></div>
 </div>
 
 <!-- ══ HISTORIE ══ -->
@@ -440,7 +445,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
 const MAANDEN=['Jan','Feb','Mrt','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'];
 const MAANDEN_LANG=['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
 
-const DEF={bedrijf:'Techniekwerkt',subtitel:'CCO Dashboard',doel:1000000,categories:['Eenmalige plaatsing','Abonnement bestaand','Abonnement nieuw','Jobboost','CPC','Resellers','CV Database','Overig'],members:['Jesper','Luuk','Nicky'],startCats:{},startTeam:{},days:[],looseOmzet:[],kpis:{acqDag:20,omzetMaand:10000},prevYearYear:2025,prevYearCumulative:[81753,114074,178017,243474,326325,371000,371000,470000,510000,532000,572000,714000]};
+const DEF={bedrijf:'Techniekwerkt',subtitel:'CCO Dashboard',doel:1000000,categories:['Eenmalige plaatsing','Abonnement bestaand','Abonnement nieuw','Jobboost','CPC','Resellers','CV Database','Overig'],members:['Jesper','Luuk','Nicky'],startCats:{},startTeam:{},days:[],looseOmzet:[],newBizCats:['eenmalige_plaatsing','jobboost','abonnement_nieuw'],kpis:{acqDag:20,omzetMaand:10000},prevYearYear:2025,prevYearCumulative:[81753,114074,178017,243474,326325,371000,371000,470000,510000,532000,572000,714000]};
 
 // CONFIGURE: Vervang dit met jouw Supabase credentials (zie Instellingen > API in Supabase)
 const SUPABASE_URL = 'https://pbjzojhidgulctxniuix.supabase.co';
@@ -478,6 +483,11 @@ function startSum(){return Object.values(S.startCats).reduce((a,b)=>a+(b||0),0);
 function catDaySum(k,y){return daysIn(y||curYear()).reduce((s,d)=>s+(d.cats?.[k]||0),0);}
 function catTotal(k){return (S.startCats[k]||0)+catDaySum(k);}
 function totalOmzet(){return startSum()+daysIn(curYear()).reduce((s,d)=>s+dayOmzet(d),0);}
+// New Business vs Bestaand. New Business = categorieën in S.newBizCats
+// (default: Eenmalige plaatsing, Jobboost, Abonnement nieuw). Rest = Bestaand.
+function isNewBiz(k){return (S.newBizCats||[]).includes(k);}
+function catYearTotal(k,jaar){const y=String(jaar||curYear());const base=(y===String(curYear()))?(S.startCats[k]||0):0;return base+catDaySum(k,y);}
+function omzetMix(jaar){let nb=0,best=0;S.categories.forEach(c=>{const k=catKey(c),t=catYearTotal(k,jaar);if(isNewBiz(k))nb+=t;else best+=t;});return{nb,best,tot:nb+best};}
 
 // ── METER ─────────────────────────────────────────────────────────────────────
 function updateMeter(){
@@ -760,6 +770,12 @@ function renderInzichten(){
   const grandTot=Object.values(catTot).reduce((a,b)=>a+(b||0),0);
   const catNames=grandTot>0?S.categories.slice():[];
   inzMakeChart('inzCats',{type:'doughnut',data:{labels:catNames.length?catNames:['Geen omzet'],datasets:[{data:catNames.length?catNames.map(c=>catTot[catKey(c)]||0):[1],backgroundColor:catNames.length?catNames.map((_,i)=>INZ_KLEUREN[i%INZ_KLEUREN.length]):['#e5e7eb'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:INZ_FONT,color:'#6b7280',boxWidth:12,usePointStyle:true}},tooltip:{callbacks:{label:c=>' '+c.label+': €'+fmt(c.parsed)}}}}});
+
+  // New Business vs Bestaand (team-niveau, incl. handmatige basis + losse omzet)
+  const mix=omzetMix(jaar);
+  const mixLbl=document.getElementById('inzMixLbl');
+  if(mixLbl){const p=mix.tot>0?Math.round(mix.nb/mix.tot*100):0;mixLbl.textContent=mix.tot>0?`New Business €${fmt(mix.nb)} (${p}%) · Bestaand €${fmt(mix.best)} (${100-p}%)`:'Nog geen omzet dit jaar';}
+  inzMakeChart('inzNewBiz',{type:'doughnut',data:{labels:['New Business','Bestaand'],datasets:[{data:mix.tot>0?[mix.nb,mix.best]:[1],backgroundColor:mix.tot>0?['#16a34a','#94a3b8']:['#e5e7eb'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:INZ_FONT,color:'#6b7280',boxWidth:12,usePointStyle:true}},tooltip:{callbacks:{label:c=>{const tot=mix.tot||1;return ' '+c.label+': €'+fmt(c.parsed)+' ('+Math.round(c.parsed/tot*100)+'%)';}}}}}});
 }
 
 function updateHeader(){
@@ -839,6 +855,7 @@ window.addEventListener('load', async () => {
   }
   if (!Array.isArray(S.days)) S.days = [];
   if (!Array.isArray(S.looseOmzet)) S.looseOmzet = [];
+  if (!Array.isArray(S.newBizCats)) S.newBizCats = DEF.newBizCats.slice();
   if (!S.startCats) S.startCats = {};
   if (!S.startTeam) S.startTeam = {};
   if (!S.kpis) S.kpis = { ...DEF.kpis };
@@ -1154,6 +1171,34 @@ function renderJaar(){
     <div class="stat-pill"><div class="pill-icon blue">📞</div><div><div class="pill-val">${fmt(totGebeld)}</div><div class="pill-lbl">Totaal gebeld</div></div></div>
     <div class="stat-pill"><div class="pill-icon cyan">📅</div><div><div class="pill-val">${fmt(totAfspraken)}</div><div class="pill-lbl">Afspraken gemaakt</div></div></div>
     <div class="stat-pill"><div class="pill-icon green">💶</div><div><div class="pill-val">€${fmt(totOmzet)}</div><div class="pill-lbl">Totale omzet</div></div></div>`;
+
+  // Omzet-mix: New Business vs Bestaand
+  const mix=omzetMix(jaar);
+  const yl=document.getElementById('jaarMixYear');if(yl)yl.textContent='('+jaar+')';
+  const mixEl=document.getElementById('jaarMix');
+  if(mixEl){
+    const pNb=mix.tot>0?Math.round(mix.nb/mix.tot*100):0,pBest=mix.tot>0?100-pNb:0;
+    const nbCats=S.categories.filter(c=>isNewBiz(catKey(c))).join(', ');
+    const bestCats=S.categories.filter(c=>!isNewBiz(catKey(c))).join(', ');
+    mixEl.innerHTML=`
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+        <div style="flex:1;min-width:180px;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.25);border-radius:10px;padding:12px 14px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.3px;color:#16a34a">NEW BUSINESS</div>
+          <div style="font-size:26px;font-weight:800;color:var(--navy)">€${fmt(mix.nb)}</div>
+          <div style="font-size:12px;color:var(--muted)">${pNb}% van de omzet</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">${nbCats}</div>
+        </div>
+        <div style="flex:1;min-width:180px;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.3);border-radius:10px;padding:12px 14px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.3px;color:#64748b">BESTAAND</div>
+          <div style="font-size:26px;font-weight:800;color:var(--navy)">€${fmt(mix.best)}</div>
+          <div style="font-size:12px;color:var(--muted)">${pBest}% van de omzet</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">${bestCats}</div>
+        </div>
+      </div>
+      <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:#eef2f7">
+        <div style="width:${pNb}%;background:#16a34a"></div><div style="width:${pBest}%;background:#94a3b8"></div>
+      </div>`;
+  }
 
   const wrap=document.getElementById('jaarPersonen');wrap.innerHTML='';
   S.members.forEach(m=>{
