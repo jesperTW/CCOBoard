@@ -257,6 +257,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
     <div id="omzetCatRows"></div>
     <div style="margin-top:14px;display:flex;gap:8px"><button class="btn btn-primary" onclick="saveStartCats()">✓ Opslaan</button></div>
   </div>
+  <div class="card">
+    <div class="card-title"><div class="dot" style="background:var(--cyan)"></div>Losse omzet toevoegen <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px">— niet aan een persoon gekoppeld</span></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Voor omzet die op een bepaalde dag binnenkomt maar niet bij één teamlid hoort (bv. bestaande klanten of CPC). Het telt mee in het omzettotaal en de categorie-grafiek op de gekozen <strong>datum</strong>, maar verschijnt niet in de persoonlijke cijfers.</p>
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div class="form-group"><label>Datum</label><input type="date" id="looseDatum" style="border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none"/></div>
+      <div class="form-group"><label>Categorie</label><select id="looseCat" style="border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;background:#fff"></select></div>
+      <div class="form-group"><label>Bedrag €</label><input type="number" id="looseBedrag" placeholder="0" step="1" min="0" style="border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;width:120px"/></div>
+      <button class="btn btn-primary" onclick="addLooseOmzet()">+ Toevoegen</button>
+    </div>
+    <div id="looseOmzetRecent" style="margin-top:14px"></div>
+  </div>
 </div>
 
 <!-- ══ WEEK ══ -->
@@ -429,7 +440,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
 const MAANDEN=['Jan','Feb','Mrt','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'];
 const MAANDEN_LANG=['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
 
-const DEF={bedrijf:'Techniekwerkt',subtitel:'CCO Dashboard',doel:1000000,categories:['Eenmalige plaatsing','Abonnement bestaand','Abonnement nieuw','Jobboost','CPC','Resellers','CV Database','Overig'],members:['Jesper','Luuk','Nicky'],startCats:{},startTeam:{},days:[],kpis:{acqDag:20,omzetMaand:10000},prevYearYear:2025,prevYearCumulative:[81753,114074,178017,243474,326325,371000,371000,470000,510000,532000,572000,714000]};
+const DEF={bedrijf:'Techniekwerkt',subtitel:'CCO Dashboard',doel:1000000,categories:['Eenmalige plaatsing','Abonnement bestaand','Abonnement nieuw','Jobboost','CPC','Resellers','CV Database','Overig'],members:['Jesper','Luuk','Nicky'],startCats:{},startTeam:{},days:[],looseOmzet:[],kpis:{acqDag:20,omzetMaand:10000},prevYearYear:2025,prevYearCumulative:[81753,114074,178017,243474,326325,371000,371000,470000,510000,532000,572000,714000]};
 
 // CONFIGURE: Vervang dit met jouw Supabase credentials (zie Instellingen > API in Supabase)
 const SUPABASE_URL = 'https://pbjzojhidgulctxniuix.supabase.co';
@@ -450,6 +461,7 @@ async function persist() {
 }
 
 function fmt(n){return Math.round(n||0).toLocaleString('nl-NL');}
+function fmtDatum(d){try{return new Date(d+'T12:00:00').toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'});}catch(e){return d;}}
 function today(){return new Date().toISOString().split('T')[0];}
 function catKey(n){return n.toLowerCase().replace(/[^a-z0-9]/g,'_');}
 function memberKey(n){return n.toLowerCase().replace(/[^a-z0-9]/g,'_');}
@@ -501,6 +513,51 @@ function saveStartCats(){
   S.categories.forEach(c=>{const k=catKey(c);S.startCats[k]=intVal('omzetcat-'+k);});
   persist();updateMeter();buildChart();renderOmzetCatRows();renderKPIs();renderLeaderboard();
   toast('✓ Omzet opgeslagen');
+}
+
+// ── LOSSE OMZET (gedateerd, niet aan een persoon gekoppeld) ──────────────────
+function renderLooseOmzet(){
+  const sel=document.getElementById('looseCat');
+  if(sel){const cur=sel.value;sel.innerHTML=S.categories.map(c=>`<option value="${c}">${c}</option>`).join('');if(cur&&S.categories.includes(cur))sel.value=cur;}
+  const dt=document.getElementById('looseDatum');if(dt&&!dt.value)dt.value=today();
+  const wrap=document.getElementById('looseOmzetRecent');if(!wrap)return;
+  const log=(S.looseOmzet||[]).filter(e=>(e.datum||'').slice(0,4)===String(curYear())).slice().sort((a,b)=>b.datum.localeCompare(a.datum));
+  if(!log.length){wrap.innerHTML='<div style="font-size:12px;color:var(--muted)">Nog geen losse omzet toegevoegd dit jaar.</div>';return;}
+  const tot=log.reduce((s,e)=>s+(e.bedrag||0),0);
+  wrap.innerHTML=`<div style="font-size:9px;color:var(--muted);font-weight:700;letter-spacing:.3px;margin-bottom:6px">DIT JAAR TOEGEVOEGD — €${fmt(tot)}</div>`+
+    log.map(e=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:13px"><strong>€${fmt(e.bedrag)}</strong> &nbsp;<span style="color:var(--muted)">${e.cat}</span></div>
+      <div style="display:flex;align-items:center;gap:12px"><span style="font-size:12px;color:var(--muted)">${fmtDatum(e.datum)}</span><button title="Verwijderen" onclick="removeLooseOmzet('${e.id}')" style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1">×</button></div>
+    </div>`).join('');
+}
+function ensureDay(datum){
+  let d=S.days.find(x=>x.datum===datum);
+  if(!d){d={datum,gebeld:0,afspraken:0,afsprakenDoor:0,deals:0,notities:'',belangrijk:false,cats:{},team:{}};S.days.push(d);S.days.sort((a,b)=>a.datum.localeCompare(b.datum));}
+  if(!d.cats)d.cats={};
+  return d;
+}
+function addLooseOmzet(){
+  const datum=document.getElementById('looseDatum').value||today();
+  const cat=document.getElementById('looseCat').value;
+  const bedrag=intVal('looseBedrag');
+  if(!cat){toast('❌ Kies een categorie');return;}
+  if(!bedrag||bedrag<=0){toast('❌ Vul een bedrag in');return;}
+  const k=catKey(cat);
+  const d=ensureDay(datum);
+  d.cats[k]=(d.cats[k]||0)+bedrag;
+  S.looseOmzet.push({id:'lo'+Date.now()+Math.floor(Math.random()*1000),datum,cat,catKey:k,bedrag});
+  document.getElementById('looseBedrag').value='';
+  persist();updateMeter();buildChart();renderOmzetCatRows();renderLooseOmzet();renderKPIs();renderLeaderboard();renderHistory();
+  toast(`✓ €${fmt(bedrag)} losse omzet (${cat}) op ${fmtDatum(datum)}`);
+}
+function removeLooseOmzet(id){
+  const i=(S.looseOmzet||[]).findIndex(e=>e.id===id);if(i<0)return;
+  const e=S.looseOmzet[i];
+  const d=S.days.find(x=>x.datum===e.datum);
+  if(d&&d.cats&&d.cats[e.catKey]!=null){d.cats[e.catKey]=Math.max(0,(d.cats[e.catKey]||0)-(e.bedrag||0));}
+  S.looseOmzet.splice(i,1);
+  persist();updateMeter();buildChart();renderOmzetCatRows();renderLooseOmzet();renderKPIs();renderLeaderboard();renderHistory();
+  toast('✓ Losse omzet verwijderd');
 }
 
 // ── CONVERSIE & KPI'S ───────────────────────────────────────────────────────
@@ -776,6 +833,7 @@ window.addEventListener('load', async () => {
     if (cached) { try { S = JSON.parse(cached); await persist(); } catch(e) {} }
   }
   if (!Array.isArray(S.days)) S.days = [];
+  if (!Array.isArray(S.looseOmzet)) S.looseOmzet = [];
   if (!S.startCats) S.startCats = {};
   if (!S.startTeam) S.startTeam = {};
   if (!S.kpis) S.kpis = { ...DEF.kpis };
@@ -867,7 +925,7 @@ function switchTab(name){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   if(name==='dag')setTimeout(buildChart,50);
-  if(name==='omzet'){updateMeter();renderOmzetCatRows();}
+  if(name==='omzet'){updateMeter();renderOmzetCatRows();renderLooseOmzet();}
   if(name==='week')generateWeek();
   if(name==='jaar')renderJaar();
   if(name==='prestaties')renderPrestaties();
@@ -1380,7 +1438,7 @@ function vulVoorbeeldData(offset){
 function saveTeam(){const n=S.members.map((_,i)=>document.getElementById('mem-'+i)?.value.trim()).filter(Boolean);S.members=n.length?n:S.members;persist();renderTeamGrid();renderSettings();toast('✓ Team opgeslagen');}
 function addMember(){S.members.push('Nieuw teamlid');renderSettings();}
 function removeMember(i){if(S.members.length<=1){toast('Minimaal 1 teamlid');return;}S.members.splice(i,1);renderSettings();}
-function saveCats(){const n=S.categories.map((_,i)=>document.getElementById('cat-'+i)?.value.trim()).filter(Boolean);S.categories=n.length?n:S.categories;persist();renderDagCatFields();renderOmzetCatRows();renderSettings();recalcDayTotals();toast('✓ Categorieën opgeslagen');}
+function saveCats(){const n=S.categories.map((_,i)=>document.getElementById('cat-'+i)?.value.trim()).filter(Boolean);S.categories=n.length?n:S.categories;persist();renderDagCatFields();renderOmzetCatRows();renderLooseOmzet();renderSettings();recalcDayTotals();toast('✓ Categorieën opgeslagen');}
 function addCat(){S.categories.push('Nieuwe categorie');renderSettings();}
 function removeCat(i){if(S.categories.length<=1){toast('Minimaal 1 categorie');return;}S.categories.splice(i,1);renderSettings();}
 
