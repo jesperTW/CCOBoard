@@ -990,10 +990,10 @@ async function fetchFromPipedrive(){
     S.members.forEach(m=>{
       const mk=memberKey(m),mn=m.toLowerCase();
       const hit=(j.perUser||[]).find(u=>{const un=u.name.toLowerCase();return un.split(/\s+/)[0]===mn||un.includes(mn);});
-      const g=document.getElementById('t-'+mk+'-gebeld'),a=document.getElementById('t-'+mk+'-afspraken'),ad=document.getElementById('t-'+mk+'-afsprakendoor'),dl=document.getElementById('t-'+mk+'-deals'),o=document.getElementById('t-'+mk+'-omzet');
+      // 'afspraken' wordt NIET uit Pipedrive gevuld — die voer je handmatig in.
+      const g=document.getElementById('t-'+mk+'-gebeld'),ad=document.getElementById('t-'+mk+'-afsprakendoor'),dl=document.getElementById('t-'+mk+'-deals'),o=document.getElementById('t-'+mk+'-omzet');
       if(hit){matchedMembers++;
         if(g)g.value=hit.gebeld||'';
-        if(a)a.value=hit.afspraken||'';
         if(ad)ad.value=hit.afsprakenDoor||'';
         if(dl)dl.value=hit.deals||'';
         if(o)o.value=Math.round(hit.omzet)||'';
