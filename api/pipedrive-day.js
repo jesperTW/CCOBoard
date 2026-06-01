@@ -144,20 +144,32 @@ function categoryFromTitle(title) {
 }
 
 async function fetchAllActivities(date) {
+  // LET OP: Pipedrive behandelt end_date als EXCLUSIEF. start_date=end_date geeft
+  // dus 0 resultaten. We zetten end_date op de dag erná om precies één dag te krijgen.
+  const endExclusive = nextDay(date);
   const out = [];
   let start = 0;
   for (let i = 0; i < 20; i++) {
     // Geen done-filter: we willen zowel ingeplande als afgeronde activiteiten
     // (afspraken = ingepland, afsprakenDoor/gebeld = afgerond). Filteren op a.done in de loop.
     const json = await pd('/activities', {
-      user_id: 0, start_date: date, end_date: date, limit: 500, start
+      user_id: 0, start_date: date, end_date: endExclusive, limit: 500, start
     });
-    (json.data || []).forEach(a => out.push(a));
+    (json.data || []).forEach(a => {
+      // dubbele zekerheid: alleen activiteiten met due_date == gevraagde dag
+      if (!a.due_date || a.due_date === date) out.push(a);
+    });
     const pg = json.additional_data?.pagination;
     if (!pg?.more_items_in_collection) break;
     start = pg.next_start;
   }
   return out;
+}
+
+function nextDay(date) {
+  const d = new Date(date + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
 }
 
 async function fetchDealsByTime(date, fieldKey) {
