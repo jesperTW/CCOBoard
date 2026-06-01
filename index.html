@@ -350,6 +350,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var
     <div class="card"><div class="card-title"><div class="dot" style="background:var(--orange)"></div>Omzet per productcategorie</div><div class="chart-wrap"><canvas id="inzCats"></canvas></div></div>
     <div class="card"><div class="card-title"><div class="dot" style="background:var(--green)"></div>New Business vs Bestaand</div><div id="inzMixLbl" style="font-size:12px;color:var(--muted);margin:-6px 0 8px"></div><div class="chart-wrap"><canvas id="inzNewBiz"></canvas></div></div>
   </div>
+  <div class="card" style="margin-top:16px"><div class="card-title"><div class="dot" style="background:var(--blue)"></div>Omzet per persoon <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:4px">— totaal vs. New Business</span></div><div class="chart-wrap"><canvas id="inzOmzetPP"></canvas></div></div>
   <div class="card" style="margin-top:16px"><div class="card-title"><div class="dot" style="background:var(--navy)"></div>Weekrapport</div><p style="font-size:13px;color:var(--muted);margin-bottom:12px">Elke vrijdag om 15:00 gaat automatisch het weekrapport per e-mail naar Jesper &amp; Michiel. Wil je het nu bekijken of versturen? Genereer het via de tab <strong>Weekrapport</strong>.</p><button class="btn btn-outline" onclick="switchTab('week')">📊 Naar weekrapport</button></div>
 </div>
 
@@ -776,6 +777,17 @@ function renderInzichten(){
   const mixLbl=document.getElementById('inzMixLbl');
   if(mixLbl){const p=mix.tot>0?Math.round(mix.nb/mix.tot*100):0;mixLbl.textContent=mix.tot>0?`New Business €${fmt(mix.nb)} (${p}%) · Bestaand €${fmt(mix.best)} (${100-p}%)`:'Nog geen omzet dit jaar';}
   inzMakeChart('inzNewBiz',{type:'doughnut',data:{labels:['New Business','Bestaand'],datasets:[{data:mix.tot>0?[mix.nb,mix.best]:[1],backgroundColor:mix.tot>0?['#16a34a','#94a3b8']:['#e5e7eb'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:INZ_FONT,color:'#6b7280',boxWidth:12,usePointStyle:true}},tooltip:{callbacks:{label:c=>{const tot=mix.tot||1;return ' '+c.label+': €'+fmt(c.parsed)+' ('+Math.round(c.parsed/tot*100)+'%)';}}}}}});
+
+  // Omzet per persoon: totale omzet vs w.v. New Business. Openingsstand per
+  // persoon (startTeam) telt mee bij het lopende jaar en hoort bij New Business.
+  const ppMembers=persoon==='__all__'?S.members:[S.members.find(m=>memberKey(m)===persoon)].filter(Boolean);
+  const inclBaseline=jaar===String(curYear());
+  const ppOmzet=ppMembers.map(m=>{const mk=memberKey(m);const base=inclBaseline?(S.startTeam?.[mk]||0):0;return base+dagen.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0);});
+  const ppNB=ppMembers.map(m=>{const mk=memberKey(m);const base=inclBaseline?(S.startTeam?.[mk]||0):0;return base+dagen.reduce((s,d)=>s+(d.team?.[mk]?.newBizOmzet||0),0);});
+  inzMakeChart('inzOmzetPP',{type:'bar',data:{labels:ppMembers,datasets:[
+    {label:'Totale omzet',data:ppOmzet,backgroundColor:'#3b6af5',borderRadius:4,maxBarThickness:46},
+    {label:'w.v. New Business',data:ppNB,backgroundColor:'#16a34a',borderRadius:4,maxBarThickness:46}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:INZ_FONT,color:'#6b7280',boxWidth:12,usePointStyle:true}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': €'+fmt(c.parsed.y)}}},scales:{x:{grid:{display:false},ticks:{font:INZ_FONT,color:'#6b7280'}},y:{grid:{color:'rgba(0,0,0,.05)'},beginAtZero:true,ticks:{font:{family:'DM Sans',size:11},color:'#6b7280'}}}}});
 }
 
 function updateHeader(){
