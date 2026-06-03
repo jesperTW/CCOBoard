@@ -890,6 +890,23 @@ window.addEventListener('load', async () => {
     S._looseMigrated = true;
     await persist();
   }
+  // Migratie: bestaande dagen kregen geen New Business per persoon (oude saveDay).
+  // Leid het alsnog af uit de categorie-mix, zonder dagen aan te raken die al
+  // New Business-attributie hebben (Pipedrive of na de fix opgeslagen). Eenmalig.
+  if (!S._nbRecomputed) {
+    (S.days || []).forEach(d => {
+      if (!d.team) return;
+      if (Object.values(d.team).some(t => (t.newBizOmzet || 0) > 0)) return;
+      const cats = d.cats || {};
+      const nbCat = S.categories.reduce((s, c) => { const k = catKey(c); return s + (isNewBiz(k) ? (cats[k] || 0) : 0); }, 0);
+      const allCat = Object.values(cats).reduce((a, b) => a + (b || 0), 0);
+      const frac = allCat > 0 ? nbCat / allCat : 0;
+      if (frac <= 0) return;
+      Object.keys(d.team).forEach(mk => { d.team[mk].newBizOmzet = Math.round((d.team[mk].omzet || 0) * frac); });
+    });
+    S._nbRecomputed = true;
+    await persist();
+  }
 
   const now = new Date();
   if (localStorage.getItem('tw_sb_collapsed') === '1') document.getElementById('sidebar').classList.add('collapsed');
