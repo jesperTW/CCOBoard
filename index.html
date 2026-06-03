@@ -1051,8 +1051,13 @@ function saveDay(){
   const cats={};
   S.categories.forEach(c=>{const k=catKey(c);cats[k]=intVal('dagcat-'+k);});
   const prevDay=S.days.find(d=>d.datum===datum);
+  // Aandeel New Business in de categorie-omzet van deze dag (voor handmatige invoer:
+  // bv. een verkochte Jobboost telt zo ook als New Business per persoon).
+  const nbCatSum=S.categories.reduce((s,c)=>{const k=catKey(c);return s+(isNewBiz(k)?(cats[k]||0):0);},0);
+  const allCatSum=Object.values(cats).reduce((a,b)=>a+(b||0),0);
+  const nbFrac=allCatSum>0?nbCatSum/allCatSum:0;
   const team={};let gebeld=0,afspraken=0,afsprakenDoor=0,deals=0;
-  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('t-'+mk+'-gebeld'),aa=intVal('t-'+mk+'-afspraken'),ad=intVal('t-'+mk+'-afsprakendoor'),dl=intVal('t-'+mk+'-deals'),oo=intVal('t-'+mk+'-omzet');const pt=prevDay?.team?.[mk]||{},pf=pdPrefill[mk]||{};team[mk]={gebeld:gg,afspraken:aa,afsprakenDoor:ad,deals:dl,omzet:oo,verloren:pf.verloren??pt.verloren??0,openDeals:pf.openDeals??pt.openDeals??0,openWaarde:pf.openWaarde??pt.openWaarde??0,newBizOmzet:pf.newBizOmzet??pt.newBizOmzet??0,status:memberStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;afsprakenDoor+=ad;deals+=dl;});
+  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('t-'+mk+'-gebeld'),aa=intVal('t-'+mk+'-afspraken'),ad=intVal('t-'+mk+'-afsprakendoor'),dl=intVal('t-'+mk+'-deals'),oo=intVal('t-'+mk+'-omzet');const pt=prevDay?.team?.[mk]||{},pf=pdPrefill[mk]||{};const nbOmzet=pf.newBizOmzet!=null?pf.newBizOmzet:Math.round(oo*nbFrac);team[mk]={gebeld:gg,afspraken:aa,afsprakenDoor:ad,deals:dl,omzet:oo,verloren:pf.verloren??pt.verloren??0,openDeals:pf.openDeals??pt.openDeals??0,openWaarde:pf.openWaarde??pt.openWaarde??0,newBizOmzet:nbOmzet,status:memberStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;afsprakenDoor+=ad;deals+=dl;});
   const day={datum,gebeld,afspraken,afsprakenDoor,deals,notities:document.getElementById('dagNotities').value.trim(),belangrijk:dagBelangrijkState,cats,team};
   const idx=S.days.findIndex(d=>d.datum===datum);
   if(idx>=0)S.days[idx]=day;else S.days.push(day);
@@ -1394,9 +1399,13 @@ function hToggleBelangrijk(){
 
 function saveHistDay(datum){
   const idx=S.days.findIndex(d=>d.datum===datum);if(idx<0)return;
+  const prevDay=S.days[idx];
   const cats={};S.categories.forEach(c=>{const k=catKey(c);cats[k]=intVal('h-dagcat-'+k);});
+  const nbCatSum=S.categories.reduce((s,c)=>{const k=catKey(c);return s+(isNewBiz(k)?(cats[k]||0):0);},0);
+  const allCatSum=Object.values(cats).reduce((a,b)=>a+(b||0),0);
+  const nbFrac=allCatSum>0?nbCatSum/allCatSum:0;
   const team={};let gebeld=0,afspraken=0,afsprakenDoor=0,deals=0;
-  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('h-t-'+mk+'-gebeld'),aa=intVal('h-t-'+mk+'-afspraken'),ad=intVal('h-t-'+mk+'-afsprakendoor'),dl=intVal('h-t-'+mk+'-deals'),oo=intVal('h-t-'+mk+'-omzet');team[mk]={gebeld:gg,afspraken:aa,afsprakenDoor:ad,deals:dl,omzet:oo,status:hStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;afsprakenDoor+=ad;deals+=dl;});
+  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('h-t-'+mk+'-gebeld'),aa=intVal('h-t-'+mk+'-afspraken'),ad=intVal('h-t-'+mk+'-afsprakendoor'),dl=intVal('h-t-'+mk+'-deals'),oo=intVal('h-t-'+mk+'-omzet');const pt=prevDay?.team?.[mk]||{};team[mk]={gebeld:gg,afspraken:aa,afsprakenDoor:ad,deals:dl,omzet:oo,verloren:pt.verloren??0,openDeals:pt.openDeals??0,openWaarde:pt.openWaarde??0,newBizOmzet:Math.round(oo*nbFrac),status:hStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;afsprakenDoor+=ad;deals+=dl;});
   S.days[idx]={datum,gebeld,afspraken,afsprakenDoor,deals,notities:(document.getElementById('h-notities')?.value||'').trim(),belangrijk:hBelangrijkState,cats,team};
   persist();updateMeter();buildChart();renderOmzetCatRows();renderKPIs();renderLeaderboard();renderHistory();
   toast('✓ Dag bijgewerkt');
