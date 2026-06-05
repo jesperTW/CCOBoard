@@ -456,7 +456,14 @@ const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let S = JSON.parse(JSON.stringify(DEF));
 let _sbUserId = null;
 
+// Kijker-accounts (alleen-lezen). Wie hierin staat, kijkt mee op het gedeelde
+// dashboard en kan niets opslaan/wijzigen.
+const VIEWER_EMAILS = ['michiel@techniekwerkt.nl'];
+let READONLY = false;
+function isViewer(email){return VIEWER_EMAILS.includes(String(email||'').toLowerCase());}
+
 async function persist() {
+  if (READONLY) return; // kijker: nooit opslaan
   localStorage.setItem('tw_cco_v1', JSON.stringify(S));
   if (_sbUserId) {
     await _sb.from('dashboard_data').upsert(
@@ -843,6 +850,26 @@ function buildChart(){
   });
 }
 
+// ── ALLEEN-LEZEN (KIJKER) ──────────────────────────────────────────────────────
+function enableReadonlyMode(email){
+  document.body.classList.add('readonly');
+  // Invoervelden + notities blokkeren (filters/datum-navigatie blijven werken).
+  const st=document.createElement('style');
+  st.textContent='body.readonly input[type=number],body.readonly textarea{pointer-events:none;opacity:.55;background:#f1f5f9}body.readonly .status-btn{pointer-events:none;opacity:.6}';
+  document.head.appendChild(st);
+  // Blokkeer alle schrijf-acties die via knoppen lopen (window-referenties).
+  const blocked=['saveDay','saveHistDay','deleteDay','saveStartCats','addLooseOmzet','removeLooseOmzet','saveCats','saveBedrijf','saveKpis','vulVoorbeeldData','fetchFromPipedrive','importCSV','addMember','removeMember','setStatus','hSetStatus','toggleDagBelangrijk','hToggleBelangrijk'];
+  blocked.forEach(fn=>{ if(typeof window[fn]==='function') window[fn]=function(){ toast('👁 Alleen-lezen — wijzigen is niet mogelijk'); }; });
+  // Banner bovenaan
+  const b=document.createElement('div');
+  b.id='readonlyBanner';
+  b.style.cssText='position:sticky;top:0;z-index:50;background:#0d1b5e;color:#fff;padding:8px 16px;font-size:13px;text-align:center;font-weight:600';
+  b.innerHTML='👁 Alleen-lezen modus — je kijkt mee op het teamdashboard. Wijzigingen worden niet opgeslagen.';
+  document.body.insertBefore(b,document.body.firstChild);
+  // Verberg de Instellingen-tab (puur bewerken) voor kijkers
+  const sett=document.querySelector('.nav-tab[onclick*="instellingen"]');if(sett)sett.style.display='none';
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 function toggleSidebar(){
   const sb=document.getElementById('sidebar');
@@ -858,6 +885,16 @@ window.addEventListener('load', async () => {
   const emailEl = document.getElementById('sbUserEmail');
   if (emailEl) emailEl.textContent = session.user.email;
 
+  // Kijker-account: laad het gedeelde dashboard (alleen-lezen) via de endpoint.
+  if (isViewer(session.user.email)) {
+    READONLY = true;
+    try {
+      const r = await fetch('/api/shared-data', { headers: { Authorization: 'Bearer ' + session.access_token } });
+      const j = await r.json();
+      if (r.ok && j.data) S = j.data;
+    } catch (e) { /* val terug op default/cache */ }
+    enableReadonlyMode(session.user.email);
+  } else {
   const { data: row } = await _sb.from('dashboard_data').select('data').eq('user_id', _sbUserId).maybeSingle();
   if (row?.data) {
     S = row.data;
@@ -865,6 +902,7 @@ window.addEventListener('load', async () => {
   } else {
     const cached = localStorage.getItem('tw_cco_v1');
     if (cached) { try { S = JSON.parse(cached); await persist(); } catch(e) {} }
+  }
   }
   if (!Array.isArray(S.days)) S.days = [];
   if (!Array.isArray(S.looseOmzet)) S.looseOmzet = [];
