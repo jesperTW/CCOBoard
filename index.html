@@ -503,6 +503,12 @@ function totalOmzet(){return startSum()+daysIn(curYear()).reduce((s,d)=>s+dayOmz
 // (default: Eenmalige plaatsing, Jobboost, Abonnement nieuw). Rest = Bestaand.
 function isNewBiz(k){return (S.newBizCats||[]).includes(k);}
 function catYearTotal(k,jaar){const y=String(jaar||curYear());const base=(y===String(curYear()))?(S.startCats[k]||0):0;return base+catDaySum(k,y)+looseCatSum(k,y);}
+// New Business per persoon per dag: afgeleid uit de categorie-mix van die dag
+// (aandeel new-business × omzet van die persoon). Zelfherstellend: altijd
+// consistent met de ingevulde categorieën. Heeft de dag geen categorie-omzet
+// (zeldzaam), dan valt het terug op de opgeslagen waarde (bv. Pipedrive).
+function dayNbFrac(d){const cats=d.cats||{};const nb=S.categories.reduce((s,c)=>{const k=catKey(c);return s+(isNewBiz(k)?(cats[k]||0):0);},0);const all=Object.values(cats).reduce((a,b)=>a+(b||0),0);return all>0?{frac:nb/all,hasCats:true}:{frac:0,hasCats:false};}
+function memberNewBiz(d,mk){const t=d.team?.[mk];if(!t)return 0;const f=dayNbFrac(d);return f.hasCats?Math.round((t.omzet||0)*f.frac):(t.newBizOmzet||0);}
 function omzetMix(jaar){let nb=0,best=0;S.categories.forEach(c=>{const k=catKey(c),t=catYearTotal(k,jaar);if(isNewBiz(k))nb+=t;else best+=t;});return{nb,best,tot:nb+best};}
 
 // ── METER ─────────────────────────────────────────────────────────────────────
@@ -790,7 +796,7 @@ function renderInzichten(){
   const ppMembers=persoon==='__all__'?S.members:[S.members.find(m=>memberKey(m)===persoon)].filter(Boolean);
   const inclBaseline=jaar===String(curYear());
   const ppOmzet=ppMembers.map(m=>{const mk=memberKey(m);const base=inclBaseline?(S.startTeam?.[mk]||0):0;return base+dagen.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0);});
-  const ppNB=ppMembers.map(m=>{const mk=memberKey(m);const base=inclBaseline?(S.startTeam?.[mk]||0):0;return base+dagen.reduce((s,d)=>s+(d.team?.[mk]?.newBizOmzet||0),0);});
+  const ppNB=ppMembers.map(m=>{const mk=memberKey(m);const base=inclBaseline?(S.startTeam?.[mk]||0):0;return base+dagen.reduce((s,d)=>s+memberNewBiz(d,mk),0);});
   inzMakeChart('inzOmzetPP',{type:'bar',data:{labels:ppMembers,datasets:[
     {label:'Totale omzet',data:ppOmzet,backgroundColor:'#3b6af5',borderRadius:4,maxBarThickness:46},
     {label:'w.v. New Business',data:ppNB,backgroundColor:'#16a34a',borderRadius:4,maxBarThickness:46}
@@ -1293,7 +1299,7 @@ function renderJaar(){
     const totA=yd.reduce((s,d)=>s+(d.team?.[mk]?.afspraken||0),0);
     const totO=(S.startTeam?.[mk]||0)+yd.reduce((s,d)=>s+(d.team?.[mk]?.omzet||0),0);
     // De openingsstand per persoon (startTeam) telt mee als New Business.
-    const totNB=(S.startTeam?.[mk]||0)+yd.reduce((s,d)=>s+(d.team?.[mk]?.newBizOmzet||0),0);
+    const totNB=(S.startTeam?.[mk]||0)+yd.reduce((s,d)=>s+memberNewBiz(d,mk),0);
     const dagMet=yd.filter(d=>d.team?.[mk]);
     const aanw=dagMet.filter(d=>!d.team[mk].status||d.team[mk].status==='aanwezig').length;
     const ziek=dagMet.filter(d=>d.team[mk].status==='ziek').length;
