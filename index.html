@@ -812,6 +812,7 @@ function updateHeader(){
 
 // ── CHART ─────────────────────────────────────────────────────────────────────
 let chart=null;
+let persoonCharts={};
 function buildChart(){
   const ctx=document.getElementById('omzetChart');if(!ctx)return;
   if(chart){chart.destroy();chart=null;}
@@ -1312,6 +1313,7 @@ function renderJaar(){
         g:md.reduce((s,d)=>s+(d.team[mk]?.gebeld||0),0),
         a:md.reduce((s,d)=>s+(d.team[mk]?.afspraken||0),0),
         o:md.reduce((s,d)=>s+(d.team[mk]?.omzet||0),0),
+        nb:md.reduce((s,d)=>s+memberNewBiz(d,mk),0),
         aanw:md.filter(d=>!d.team[mk].status||d.team[mk].status==='aanwezig').length,
         ziek:md.filter(d=>d.team[mk].status==='ziek').length,
         afwez:md.filter(d=>d.team[mk].status==='afwezig').length,
@@ -1349,8 +1351,29 @@ function renderJaar(){
           <tr class="totaal-row"><td>Totaal</td><td>${fmt(totG)}</td><td>${fmt(totA)}</td><td>€${fmt(totO)}</td><td>${aanw}</td><td>${ziek}</td><td>${afwez}</td></tr>
           </tbody>
         </table>
+      </div>
+      <div style="padding:16px 16px 20px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Omzet &amp; New Business per maand</div>
+        <div style="position:relative;height:220px"><canvas id="persoon-chart-${mk}"></canvas></div>
       </div>`;
     wrap.appendChild(card);
+    {
+      const ctx=document.getElementById('persoon-chart-'+mk);
+      if(ctx){
+        if(persoonCharts[mk])persoonCharts[mk].destroy();
+        const startO=S.startTeam?.[mk]||0;
+        const omzetData=maandData.map((md,mi)=>mi===0?md.o+startO:md.o);
+        const nbData=maandData.map((md,mi)=>mi===0?md.nb+startO:md.nb);
+        persoonCharts[mk]=new Chart(ctx,{type:'bar',data:{labels:MAANDEN,datasets:[
+          {label:'Omzet',data:omzetData,backgroundColor:'rgba(59,106,245,.75)',borderRadius:4,maxBarThickness:28},
+          {label:'New Business',data:nbData,backgroundColor:'rgba(22,163,74,.75)',borderRadius:4,maxBarThickness:28}
+        ]},options:{responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{labels:{font:{family:'DM Sans',size:12},color:'#6b7280',boxWidth:12,usePointStyle:true}},
+            tooltip:{callbacks:{label:c=>' '+c.dataset.label+': €'+fmt(c.parsed.y)}}},
+          scales:{x:{grid:{display:false},ticks:{font:{family:'DM Sans',size:11},color:'#6b7280'}},
+            y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'DM Sans',size:11},color:'#6b7280',callback:v=>'€'+fmt(v)},beginAtZero:true}}}});
+      }
+    }
   });
   renderKPIs();renderLeaderboard();
 }
