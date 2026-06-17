@@ -1313,7 +1313,7 @@ function renderJaar(){
         g:md.reduce((s,d)=>s+(d.team[mk]?.gebeld||0),0),
         a:md.reduce((s,d)=>s+(d.team[mk]?.afspraken||0),0),
         o:md.reduce((s,d)=>s+(d.team[mk]?.omzet||0),0),
-        nb:md.reduce((s,d)=>s+memberNewBiz(d,mk),0),
+        nb:md.reduce((s,d)=>s+(d.team[mk]?.newBizOmzet||0),0),
         aanw:md.filter(d=>!d.team[mk].status||d.team[mk].status==='aanwezig').length,
         ziek:md.filter(d=>d.team[mk].status==='ziek').length,
         afwez:md.filter(d=>d.team[mk].status==='afwezig').length,
@@ -1348,7 +1348,8 @@ function renderJaar(){
         <table class="data-table">
           <thead><tr><th>Maand</th><th>Gebeld</th><th>Afspraken</th><th>Omzet</th><th>Aanwezig</th><th>Ziek</th><th>Afwezig</th></tr></thead>
           <tbody>${maandRows}
-          <tr class="totaal-row"><td>Totaal</td><td>${fmt(totG)}</td><td>${fmt(totA)}</td><td>€${fmt(totO)}</td><td>${aanw}</td><td>${ziek}</td><td>${afwez}</td></tr>
+          <tr class="totaal-row"><td>Totaal</td><td>${fmt(totG)}</td><td>${fmt(totA)}</td><td>€${fmt(totO-(S.startTeam?.[mk]||0))}</td><td>${aanw}</td><td>${ziek}</td><td>${afwez}</td></tr>
+          ${(S.startTeam?.[mk]||0)>0?`<tr style="font-size:12px;color:var(--muted)"><td colspan="4" style="padding:6px 10px">+ €${fmt(S.startTeam[mk])} openingsstand → totaal €${fmt(totO)}</td><td colspan="3"></td></tr>`:''}
           </tbody>
         </table>
       </div>
@@ -1361,9 +1362,8 @@ function renderJaar(){
       const ctx=document.getElementById('persoon-chart-'+mk);
       if(ctx){
         if(persoonCharts[mk])persoonCharts[mk].destroy();
-        const startO=S.startTeam?.[mk]||0;
-        const omzetData=maandData.map((md,mi)=>mi===0?md.o+startO:md.o);
-        const nbData=maandData.map((md,mi)=>mi===0?md.nb+startO:md.nb);
+        const omzetData=maandData.map(md=>md.o);
+        const nbData=maandData.map(md=>md.nb);
         persoonCharts[mk]=new Chart(ctx,{type:'bar',data:{labels:MAANDEN,datasets:[
           {label:'Omzet',data:omzetData,backgroundColor:'rgba(59,106,245,.75)',borderRadius:4,maxBarThickness:28},
           {label:'New Business',data:nbData,backgroundColor:'rgba(22,163,74,.75)',borderRadius:4,maxBarThickness:28}
