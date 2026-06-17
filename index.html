@@ -1068,6 +1068,7 @@ function renderTeamGrid(){
         <div class="team-stat"><label>Doorgegaan</label><input type="number" id="t-${mk}-afsprakendoor" placeholder="0" min="0" step="1" oninput="recalcDayTotals()"/></div>
         <div class="team-stat"><label>Deals</label><input type="number" id="t-${mk}-deals" placeholder="0" min="0" step="1" oninput="recalcDayTotals()"/></div>
         <div class="team-stat"><label>Omzet €</label><input type="number" id="t-${mk}-omzet" placeholder="0" step="1" min="0" oninput="recalcDayTotals()"/></div>
+        <div class="team-stat"><label style="color:#16a34a;font-weight:700;font-size:10px">NEW BIZ?</label><input type="checkbox" id="t-${mk}-nb" style="margin-top:8px;width:20px;height:20px;cursor:pointer;accent-color:#16a34a"/></div>
       </div>`;
     grid.appendChild(div);
     memberStatuses[mk]='aanwezig';
@@ -1119,7 +1120,7 @@ function saveDay(){
   const allCatSum=Object.values(cats).reduce((a,b)=>a+(b||0),0);
   const nbFrac=allCatSum>0?nbCatSum/allCatSum:0;
   const team={};let gebeld=0,afspraken=0,afsprakenDoor=0,deals=0;
-  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('t-'+mk+'-gebeld'),aa=intVal('t-'+mk+'-afspraken'),ad=intVal('t-'+mk+'-afsprakendoor'),dl=intVal('t-'+mk+'-deals'),oo=intVal('t-'+mk+'-omzet');const pt=prevDay?.team?.[mk]||{},pf=pdPrefill[mk]||{};const nbOmzet=pf.newBizOmzet!=null?pf.newBizOmzet:Math.round(oo*nbFrac);team[mk]={gebeld:gg,afspraken:aa,afsprakenDoor:ad,deals:dl,omzet:oo,verloren:pf.verloren??pt.verloren??0,openDeals:pf.openDeals??pt.openDeals??0,openWaarde:pf.openWaarde??pt.openWaarde??0,newBizOmzet:nbOmzet,status:memberStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;afsprakenDoor+=ad;deals+=dl;});
+  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('t-'+mk+'-gebeld'),aa=intVal('t-'+mk+'-afspraken'),ad=intVal('t-'+mk+'-afsprakendoor'),dl=intVal('t-'+mk+'-deals'),oo=intVal('t-'+mk+'-omzet');const pt=prevDay?.team?.[mk]||{},pf=pdPrefill[mk]||{};const nbEl=document.getElementById('t-'+mk+'-nb');const nbOmzet=nbEl?(nbEl.checked?oo:0):(pf.newBizOmzet!=null?pf.newBizOmzet:Math.round(oo*nbFrac));team[mk]={gebeld:gg,afspraken:aa,afsprakenDoor:ad,deals:dl,omzet:oo,verloren:pf.verloren??pt.verloren??0,openDeals:pf.openDeals??pt.openDeals??0,openWaarde:pf.openWaarde??pt.openWaarde??0,newBizOmzet:nbOmzet,status:memberStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;afsprakenDoor+=ad;deals+=dl;});
   const day={datum,gebeld,afspraken,afsprakenDoor,deals,notities:document.getElementById('dagNotities').value.trim(),belangrijk:dagBelangrijkState,cats,team};
   const idx=S.days.findIndex(d=>d.datum===datum);
   if(idx>=0)S.days[idx]=day;else S.days.push(day);
@@ -1201,7 +1202,7 @@ function loadDay(datum){
   document.getElementById('dagNotities').value=d.notities||'';
   setDagBelangrijk(d.belangrijk);
   S.categories.forEach(c=>{const k=catKey(c);const e=document.getElementById('dagcat-'+k);if(e)e.value=d.cats?.[k]||'';});
-  S.members.forEach(m=>{const mk=memberKey(m);const tm=d.team?.[mk];[['gebeld','gebeld'],['afspraken','afspraken'],['afsprakendoor','afsprakenDoor'],['deals','deals'],['omzet','omzet']].forEach(([id,key])=>{const e=document.getElementById('t-'+mk+'-'+id);if(e)e.value=tm?.[key]||'';});setStatus(mk,tm?.status||'aanwezig');});
+  S.members.forEach(m=>{const mk=memberKey(m);const tm=d.team?.[mk];[['gebeld','gebeld'],['afspraken','afspraken'],['afsprakendoor','afsprakenDoor'],['deals','deals'],['omzet','omzet']].forEach(([id,key])=>{const e=document.getElementById('t-'+mk+'-'+id);if(e)e.value=tm?.[key]||'';});const nbEl=document.getElementById('t-'+mk+'-nb');if(nbEl)nbEl.checked=(tm?.newBizOmzet||0)>0;setStatus(mk,tm?.status||'aanwezig');});
   recalcDayTotals();
   toast('✏️ Dag geladen — pas aan en sla opnieuw op');
 }
@@ -1613,7 +1614,7 @@ function vulVoorbeeldData(offset){
 function saveTeam(){const n=S.members.map((_,i)=>document.getElementById('mem-'+i)?.value.trim()).filter(Boolean);S.members=n.length?n:S.members;persist();renderTeamGrid();renderSettings();toast('✓ Team opgeslagen');}
 function addMember(){S.members.push('Nieuw teamlid');renderSettings();}
 function removeMember(i){if(S.members.length<=1){toast('Minimaal 1 teamlid');return;}S.members.splice(i,1);renderSettings();}
-function saveCats(){const n=S.categories.map((_,i)=>document.getElementById('cat-'+i)?.value.trim()).filter(Boolean);if(n.length){S.categories=n;S.newBizCats=n.filter((_,i)=>document.getElementById('catnb-'+i)?.checked).map(c=>catKey(c));}persist();renderDagCatFields();renderOmzetCatRows();renderLooseOmzet();renderSettings();recalcDayTotals();renderJaar();toast('✓ Categorieën &amp; New Business opgeslagen');}
+function saveCats(){const n=S.categories.map((_,i)=>document.getElementById('cat-'+i)?.value.trim()).filter(Boolean);if(n.length){S.categories=n;S.newBizCats=n.filter((_,i)=>document.getElementById('catnb-'+i)?.checked).map(c=>catKey(c));S.days.forEach(d=>{const f=dayNbFrac(d);if(!f.hasCats)return;Object.keys(d.team||{}).forEach(mk=>{if(d.team[mk])d.team[mk].newBizOmzet=Math.round((d.team[mk].omzet||0)*f.frac);});});}persist();renderDagCatFields();renderOmzetCatRows();renderLooseOmzet();renderSettings();recalcDayTotals();renderJaar();toast('✓ Categorieën &amp; New Business opgeslagen — historische cijfers herberekend');}
 function addCat(){S.categories.push('Nieuwe categorie');renderSettings();}
 function removeCat(i){if(S.categories.length<=1){toast('Minimaal 1 categorie');return;}S.categories.splice(i,1);renderSettings();}
 
