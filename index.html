@@ -1439,6 +1439,7 @@ function histEditorHTML(d){
         <div class="team-stat"><label>Doorgegaan</label><input type="number" id="h-t-${mk}-afsprakendoor" value="${tm.afsprakenDoor||''}" min="0" step="1" placeholder="0"/></div>
         <div class="team-stat"><label>Deals</label><input type="number" id="h-t-${mk}-deals" value="${tm.deals||''}" min="0" step="1" placeholder="0"/></div>
         <div class="team-stat"><label>Omzet €</label><input type="number" id="h-t-${mk}-omzet" value="${tm.omzet||''}" min="0" step="1" placeholder="0"/></div>
+        <div class="team-stat"><label style="color:#16a34a;font-weight:700;font-size:10px">NEW BIZ?</label><input type="checkbox" id="h-t-${mk}-nb" ${(tm.newBizOmzet||0)>0?'checked':''} style="margin-top:8px;width:20px;height:20px;cursor:pointer;accent-color:#16a34a"/></div>
       </div>
     </div>`;
   }).join('');
@@ -1490,7 +1491,7 @@ function saveHistDay(datum){
   const allCatSum=Object.values(cats).reduce((a,b)=>a+(b||0),0);
   const nbFrac=allCatSum>0?nbCatSum/allCatSum:0;
   const team={};let gebeld=0,afspraken=0,afsprakenDoor=0,deals=0;
-  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('h-t-'+mk+'-gebeld'),aa=intVal('h-t-'+mk+'-afspraken'),ad=intVal('h-t-'+mk+'-afsprakendoor'),dl=intVal('h-t-'+mk+'-deals'),oo=intVal('h-t-'+mk+'-omzet');const pt=prevDay?.team?.[mk]||{};team[mk]={gebeld:gg,afspraken:aa,afsprakenDoor:ad,deals:dl,omzet:oo,verloren:pt.verloren??0,openDeals:pt.openDeals??0,openWaarde:pt.openWaarde??0,newBizOmzet:Math.round(oo*nbFrac),status:hStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;afsprakenDoor+=ad;deals+=dl;});
+  S.members.forEach(m=>{const mk=memberKey(m);const gg=intVal('h-t-'+mk+'-gebeld'),aa=intVal('h-t-'+mk+'-afspraken'),ad=intVal('h-t-'+mk+'-afsprakendoor'),dl=intVal('h-t-'+mk+'-deals'),oo=intVal('h-t-'+mk+'-omzet');const pt=prevDay?.team?.[mk]||{};const nbEl=document.getElementById('h-t-'+mk+'-nb');const nbOmzet=nbEl?(nbEl.checked?oo:0):Math.round(oo*nbFrac);team[mk]={gebeld:gg,afspraken:aa,afsprakenDoor:ad,deals:dl,omzet:oo,verloren:pt.verloren??0,openDeals:pt.openDeals??0,openWaarde:pt.openWaarde??0,newBizOmzet:nbOmzet,status:hStatuses[mk]||'aanwezig'};gebeld+=gg;afspraken+=aa;afsprakenDoor+=ad;deals+=dl;});
   S.days[idx]={datum,gebeld,afspraken,afsprakenDoor,deals,notities:(document.getElementById('h-notities')?.value||'').trim(),belangrijk:hBelangrijkState,cats,team};
   persist();updateMeter();buildChart();renderOmzetCatRows();renderKPIs();renderLeaderboard();renderHistory();
   toast('✓ Dag bijgewerkt');
