@@ -1313,7 +1313,7 @@ function renderJaar(){
         g:md.reduce((s,d)=>s+(d.team[mk]?.gebeld||0),0),
         a:md.reduce((s,d)=>s+(d.team[mk]?.afspraken||0),0),
         o:md.reduce((s,d)=>s+(d.team[mk]?.omzet||0),0),
-        nb:md.reduce((s,d)=>s+(d.team[mk]?.newBizOmzet||0),0),
+        nb:md.reduce((s,d)=>s+memberNewBiz(d,mk),0),
         aanw:md.filter(d=>!d.team[mk].status||d.team[mk].status==='aanwezig').length,
         ziek:md.filter(d=>d.team[mk].status==='ziek').length,
         afwez:md.filter(d=>d.team[mk].status==='afwezig').length,
@@ -1566,7 +1566,7 @@ function renderSettings(){
   const mw=document.getElementById('memberSettings');mw.innerHTML='';
   S.members.forEach((m,i)=>{const row=document.createElement('div');row.className='set-row';row.innerHTML=`<input type="text" value="${m}" id="mem-${i}"/><button class="btn btn-danger btn-sm" onclick="removeMember(${i})">✕</button>`;mw.appendChild(row);});
   const cw=document.getElementById('catSettings');cw.innerHTML='';
-  S.categories.forEach((c,i)=>{const row=document.createElement('div');row.className='set-row';row.innerHTML=`<input type="text" value="${c}" id="cat-${i}"/><button class="btn btn-danger btn-sm" onclick="removeCat(${i})">✕</button>`;cw.appendChild(row);});
+  S.categories.forEach((c,i)=>{const k=catKey(c);const nb=(S.newBizCats||[]).includes(k);const row=document.createElement('div');row.className='set-row';row.innerHTML=`<input type="text" value="${c}" id="cat-${i}" style="flex:1"/><label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;white-space:nowrap;padding:0 6px;color:${nb?'#16a34a':'var(--muted)'}"><input type="checkbox" id="catnb-${i}" ${nb?'checked':''} style="accent-color:#16a34a;cursor:pointer"/> New Biz</label><button class="btn btn-danger btn-sm" onclick="removeCat(${i})">✕</button>`;cw.appendChild(row);});
 }
 function saveBedrijf(){S.bedrijf=document.getElementById('set-bedrijf').value.trim()||'Techniekwerkt';S.subtitel=document.getElementById('set-subtitel').value.trim()||'CCO Dashboard';S.doel=parseInt(document.getElementById('set-doel').value)||1000000;persist();updateHeader();updateMeter();buildChart();toast('✓ Opgeslagen');}
 function saveKpis(){S.kpis=S.kpis||{};S.kpis.acqDag=Math.max(0,parseInt(document.getElementById('set-kpi-acqdag').value)||0);S.kpis.omzetMaand=Math.max(0,parseInt(document.getElementById('set-kpi-omzetmaand').value)||0);persist();renderPrestaties();toast('✓ KPI-doelen opgeslagen');}
@@ -1613,7 +1613,7 @@ function vulVoorbeeldData(offset){
 function saveTeam(){const n=S.members.map((_,i)=>document.getElementById('mem-'+i)?.value.trim()).filter(Boolean);S.members=n.length?n:S.members;persist();renderTeamGrid();renderSettings();toast('✓ Team opgeslagen');}
 function addMember(){S.members.push('Nieuw teamlid');renderSettings();}
 function removeMember(i){if(S.members.length<=1){toast('Minimaal 1 teamlid');return;}S.members.splice(i,1);renderSettings();}
-function saveCats(){const n=S.categories.map((_,i)=>document.getElementById('cat-'+i)?.value.trim()).filter(Boolean);S.categories=n.length?n:S.categories;persist();renderDagCatFields();renderOmzetCatRows();renderLooseOmzet();renderSettings();recalcDayTotals();toast('✓ Categorieën opgeslagen');}
+function saveCats(){const n=S.categories.map((_,i)=>document.getElementById('cat-'+i)?.value.trim()).filter(Boolean);if(n.length){S.categories=n;S.newBizCats=n.filter((_,i)=>document.getElementById('catnb-'+i)?.checked).map(c=>catKey(c));}persist();renderDagCatFields();renderOmzetCatRows();renderLooseOmzet();renderSettings();recalcDayTotals();renderJaar();toast('✓ Categorieën &amp; New Business opgeslagen');}
 function addCat(){S.categories.push('Nieuwe categorie');renderSettings();}
 function removeCat(i){if(S.categories.length<=1){toast('Minimaal 1 categorie');return;}S.categories.splice(i,1);renderSettings();}
 
